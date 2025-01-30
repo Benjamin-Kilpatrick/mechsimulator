@@ -13,6 +13,11 @@ source ./venv/bin/activate
 pip install -r Requirements.txt
 ```
 
+setup dependancy for docs
+```bash
+sudo apt-get install doxygen graphviz
+```
+
 ### Windows
 Setup env
 ```cmd
@@ -24,7 +29,7 @@ Setup env
 ```bash
 source ./venv/bin/activate
 cd bin
-
+python run.py <some job file>
 ```
 
 ## Docs Generation
