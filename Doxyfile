@@ -7,3 +7,5 @@ EXTRACT_ALL            = YES
 HAVE_DOT               = YES
 UML_LOOK               = YES
 FILTER_PATTERNS        = *.py=py_filter
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
