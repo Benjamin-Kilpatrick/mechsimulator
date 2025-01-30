@@ -1,3 +1,4 @@
+import os
 from os.path import join
 from mechsimulator.parser import exp
 from mechsimulator.parser import spc
@@ -42,7 +43,7 @@ def single_file(path, filename, filetype, opts=None):
     """
 
     opts = opts or {}  # set to empty dict if None
-    filename = join(path, filename)
+    filename = os.path.join(path, filename)
 
     if filetype == 'exp':
         obj = exp.load_exp_set(filename)
