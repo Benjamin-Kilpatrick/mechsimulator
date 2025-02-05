@@ -33,6 +33,12 @@ python run.py <some job file>
 ```
 
 ## Docs Generation
+
+### Windows
 ```commandline
 doxygen Doxyfile
+```
+###
+```bash
+doxygen Doxyfile-linux
 ```

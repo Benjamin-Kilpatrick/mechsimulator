@@ -1,0 +1,11 @@
+PROJECT_NAME           = "MechSimulator"
+OUTPUT_DIRECTORY       = docs
+INPUT                  = ./mechsimulator
+RECURSIVE              = YES
+GENERATE_LATEX         = NO
+EXTRACT_ALL            = YES
+HAVE_DOT               = YES
+UML_LOOK               = YES
+FILTER_PATTERNS        = *.py=/home/benjamin/Documents/13Baylor/CAP/mechsimulator/py_filter.sh
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
