@@ -38,7 +38,7 @@ python run.py <some job file>
 ```commandline
 doxygen Doxyfile
 ```
-###
+### Linux
 ```bash
 doxygen Doxyfile-linux
 ```
