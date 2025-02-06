@@ -17,9 +17,9 @@ def mult_sets_filenames(exp_filenames, mech_filenames, spc_csv_filenames,
                         **kwargs):
 
     # Load objects by parsing files
-    exp_sets = parser.main.mult_files(exp_filenames, 'exp')
-    gases = parser.main.mult_files(mech_filenames, 'mech')
-    mech_spc_dcts = parser.main.mult_files(spc_csv_filenames, 'spc')
+    exp_sets = [ parser.exp.load_exp_set(filename) for filename in exp_filenames ] #parser.main.mult_files(exp_filenames, 'exp')
+    gases = [ parser.mech.load_solution_obj(filename) for filename in mech_filenames ] #parser.main.mult_files(mech_filenames, 'mech')
+    mech_spc_dcts = [ parser.spc.load_mech_spc_dct(filename) for filename in spc_csv_filenames ] # parser.main.mult_files(spc_csv_filenames, 'spc')
 
     # Create the mech options list by reading any optional keywords
     # mech_opts_lst = simulator.util._mech_opts_lst(exp_sets[0], gases, kwargs)

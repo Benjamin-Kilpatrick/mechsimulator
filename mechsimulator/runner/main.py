@@ -1,3 +1,5 @@
+import os
+
 from mechsimulator.runner import util
 from mechsimulator import parser
 from mechsimulator import plotter
@@ -32,7 +34,11 @@ def run_job(job_file, job_path=None):
     """
 
     job_path = job_path or JOB_PATH
-    job_dct = parser.main.single_file(job_path, job_file, 'job')
+    # CLEAN UP - too many calls
+    # job_dct = parser.main.single_file(job_path, job_file, 'job')
+    filename = os.path.join(job_path, job_file)
+    job_dct = parser.job.load_job(filename)
+    # END CLEANUP
     job_type = job_dct['job_type']
 
     # Not sure how other job types will work...
@@ -45,9 +51,9 @@ def run_job(job_file, job_path=None):
         x_srcs = job_dct['x_srcs']
         cond_srcs = job_dct['cond_srcs']
         # Load objects using the filenames
-        exp_sets = parser.main.mult_files(EXP_PATH, exp_filenames, 'exp')
-        gases = parser.main.mult_files(MECH_PATH, mech_filenames, 'mech')
-        mech_spc_dcts = parser.main.mult_files(SPC_PATH, spc_filenames, 'spc')
+        exp_sets = [ parser.exp.load_exp_set(os.path.join(EXP_PATH, filename)) for filename in exp_filenames ] #parser.main.mult_exp_files(EXP_PATH, exp_filenames)
+        gases = [ parser.mech.load_solution_obj(os.path.join(MECH_PATH, filename)) for filename in mech_filenames ] #parser.main.mult_mech_files(MECH_PATH, mech_filenames)
+        mech_spc_dcts = [ parser.spc.load_mech_spc_dct(os.path.join(MECH_PATH, filename)) for filename in spc_filenames ] #parser.main.mult_files(SPC_PATH, spc_filenames, 'spc')
         util.check_inputs(job_dct, exp_sets)  # run some checks
         # Load the mech_opts_lst
         mech_opts_lst = util._mech_opts_lst(exp_sets[0], gases,

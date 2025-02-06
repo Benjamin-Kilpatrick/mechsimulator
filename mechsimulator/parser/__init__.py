@@ -1,4 +1,3 @@
-from mechsimulator.parser import main
 from mechsimulator.parser import exp
 from mechsimulator.parser import spc
 from mechsimulator.parser import mech
