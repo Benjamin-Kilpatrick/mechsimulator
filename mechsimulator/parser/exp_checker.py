@@ -624,7 +624,7 @@ def get_poss_inps(reac_type, meas_type, plot_or_exps, rm_bad=True):
         :type meas_type: str
         :param plot_or_exps: either 'plot' or 'exps'
         :type plot_or_exps: str
-        :param rm_bad: whether or not to remove the plot-specific inputs
+        :param rm_bad: whether to remove the plot-specific inputs
         :type rm_bad: Bool
         :return poss_inps: all possible inputs
         :rtype: tuple (str1, str2, ...)
