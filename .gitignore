@@ -5,4 +5,5 @@ docs/*
 lib/results/*
 *.swp
 *.swo
+*.npy
 bin/output.pdf
