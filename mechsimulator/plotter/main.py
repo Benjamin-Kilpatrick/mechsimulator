@@ -53,10 +53,11 @@ def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
     #                        headers=headers)
     figs_axes = []
     # Loop over each experimental set
-    for idx, exp_set in enumerate(exp_sets):
+    # TODO! is this better?
+    for exp_set, calc_type, x_src, cond_src in zip(exp_sets, calc_types, x_srcs, cond_srcs):
         set_figs_axes = single_set(
-            exp_set, gases, mech_spc_dcts, calc_types[idx], x_srcs[idx],
-            cond_srcs[idx], mech_opts_lst=mech_opts_lst)
+            exp_set, gases, mech_spc_dcts, calc_type, x_src,
+            cond_src, mech_opts_lst=mech_opts_lst)
         figs_axes.extend(set_figs_axes)
 
     return figs_axes
