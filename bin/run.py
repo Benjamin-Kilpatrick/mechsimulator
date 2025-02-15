@@ -1,6 +1,7 @@
 """ Runs one or more job files
 
     Example: python run.py jobfile1 jobfile2 ...
+    BK_USED
 """
 import os
 import sys
