@@ -108,7 +108,7 @@ ALLOWED_PHI_PARAMS = (
 
 # Allowed simulation options (keys) and:
 # (1) their default values
-# (2) permitted reactor types for that option (blank indicates all reactors)
+# (2) permitted reactor types for that option (blank indicates all reactions)
 ALLOWED_SIM_OPTS = {
     'niters':           (2e4,
                          ('jsr',)),

@@ -140,7 +140,7 @@ def rcm(temp, pressure, mix, gas, targ_spcs, end_time, v_of_t):
 
     gas = _set_state(gas, temp, pressure, mix)
 
-    print('inside reactors, rcm temp: ', temp)
+    print('inside reactions, rcm temp: ', temp)
     # Normalize the volume profile by the first value
     v_of_t[1, :] = v_of_t[1, :] / v_of_t[1, 0]
 
