@@ -1,7 +1,7 @@
 from typing import List
 
-from experiments.common.variable import Variable
-from experiments.measurements.measurement import Measurement
+from data.experiments.common.variable import Variable
+from data.experiments.measurements.measurement import Measurement
 
 
 

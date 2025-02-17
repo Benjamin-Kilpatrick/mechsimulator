@@ -1,5 +1,5 @@
-from common.value import Value
-from mixtures.species import Species
+from data.common.value import Value
+from data.mechanism.species import Species
 
 
 class Compound:

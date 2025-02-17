@@ -1,5 +1,5 @@
-from experiments.common.variable import Variable
-from experiments.datapoint import Datapoint
+from data.experiments.common.variable import Variable
+from data.experiments.datapoint import Datapoint
 
 
 class Measurement:

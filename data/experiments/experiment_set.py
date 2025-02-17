@@ -1,9 +1,9 @@
 from typing import List
 
-from experiments.common.calculation_type import CalculationType
-from experiments.common.data_source import DataSource
-from experiments.experiment import Experiment
-from experiments.metadata import MetaData
+from data.experiments.common.calculation_type import CalculationType
+from data.experiments.common.data_source import DataSource
+from data.experiments.experiment import Experiment
+from data.experiments.metadata import MetaData
 
 
 class ExperimentSet:

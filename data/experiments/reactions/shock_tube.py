@@ -1,6 +1,6 @@
 from typing import Optional
 
-from experiments.reactions.reaction import Reaction
+from data.experiments.reactions.reaction import Reaction
 
 
 class ShockTube(Reaction):

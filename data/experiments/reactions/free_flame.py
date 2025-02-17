@@ -1,5 +1,5 @@
-from experiments.common.phi import Phi
-from experiments.reactions.reaction import Reaction
+from data.experiments.common.phi import Phi
+from data.experiments.reactions.reaction import Reaction
 
 
 class FreeFlame(Reaction):

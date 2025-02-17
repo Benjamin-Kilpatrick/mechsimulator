@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy
 
-from experiments.reactions.reaction import Reaction
+from data.experiments.reactions.reaction import Reaction
 
 
 class RapidCompressionMachine(Reaction):

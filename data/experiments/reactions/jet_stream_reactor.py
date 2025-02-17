@@ -1,4 +1,4 @@
-from experiments.reactions.reaction import Reaction
+from data.experiments.reactions.reaction import Reaction
 
 
 class JetStreamReactor(Reaction):

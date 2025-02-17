@@ -1,4 +1,3 @@
-
 class Variable:
     def __init__(self, name: str, start: float, end: float, increment: float):
         self.name = name

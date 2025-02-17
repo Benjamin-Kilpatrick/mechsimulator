@@ -2,8 +2,8 @@ from typing import Optional
 
 import numpy
 
-from experiments.measurements.measurement import Measurement
-from experiments.reactions.reaction import Reaction
+from data.experiments.measurements.measurement import Measurement
+from data.experiments.reactions.reaction import Reaction
 
 
 class PlugFlowReactor(Reaction):

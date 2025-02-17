@@ -1,7 +1,7 @@
 from typing import List
 
-from experiments.result import Result
-from mixtures.compound import Compound
+from data.experiments.result import Result
+from data.mixtures.compound import Compound
 
 
 class Datapoint:

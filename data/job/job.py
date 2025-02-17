@@ -1,7 +1,7 @@
 from typing import List
 
-from experiments.experiment_set import ExperimentSet
-from mechanism.mechanism import Mechanism
+from data.experiments.experiment_set import ExperimentSet
+from data.mechanism.mechanism import Mechanism
 
 
 class Job:
