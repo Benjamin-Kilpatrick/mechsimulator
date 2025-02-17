@@ -2,8 +2,13 @@ __pycache__/
 venv/*
 .idea/*
 docs/*
-lib/results/*
+lib/*
 *.swp
 *.swo
 *.npy
-bin/output.pdf
+bin/*
+build.sh
+environment.yaml
+fake-install.sh
+meta.yaml
+setup.py
