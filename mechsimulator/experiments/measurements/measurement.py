@@ -1,10 +1,13 @@
 from experiments.common.variable import Variable
-from experiments.measurements.measurement_type import MeasurementType
+from experiments.datapoint import Datapoint
 
 
 class Measurement:
     def __init__(self, variable: Variable):
         self.variable: Variable = variable
 
-    def get_type(self) -> MeasurementType:
+    def initialize_datapoint(self, data):
+        raise NotImplementedError
+
+    def get_datapoint(self) -> Datapoint:
         raise NotImplementedError

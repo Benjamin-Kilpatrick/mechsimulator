@@ -1,6 +1,6 @@
 from experiments.common.variable import Variable
 from experiments.measurements.measurement import Measurement
-from experiments.measurements.measurement_type import MeasurementType
+
 
 
 class Emission(Measurement):
@@ -16,6 +16,3 @@ class Emission(Measurement):
         self.end_time: float = end_time
         self.wavelength: float = wavelength
         self.active_species: str = active_species
-
-    def get_type(self) -> MeasurementType:
-        return MeasurementType.EMISSION

@@ -1,6 +1,5 @@
 from experiments.common.variable import Variable
 from experiments.measurements.measurement import Measurement
-from experiments.measurements.measurement_type import MeasurementType
 
 
 class Abs(Measurement):
@@ -20,6 +19,3 @@ class Abs(Measurement):
         self.active_species: str = active_species
         self.abs_coefficient: float = abs_coefficient
         self.path_length: float = path_length
-
-    def get_type(self) -> MeasurementType:
-        return MeasurementType.ABS

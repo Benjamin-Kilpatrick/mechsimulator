@@ -1,13 +1,22 @@
 from typing import List
 
+from experiments.common.calculation_type import CalculationType
+from experiments.common.data_source import DataSource
 from experiments.experiment import Experiment
 from experiments.metadata import MetaData
 
 
 class ExperimentSet:
     def __init__(self,
-                 metadata: MetaData):
+                 metadata: MetaData,
+                 calculation_type: CalculationType,
+                 x_source: DataSource,
+                 condition_source: DataSource):
         self.metadata: MetaData = metadata
+        self.calculation_type: CalculationType = calculation_type
+        self.x_source: DataSource = x_source
+        self.condition_source: DataSource = condition_source
+
         self.simulated_experiments: List[Experiment] = []
 
         # TODO implement this operation
