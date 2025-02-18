@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib import cm
-from io import plotter_util
+from serial import plotter_util
 
 LINES = ['-', '--', '-.', ':']
 

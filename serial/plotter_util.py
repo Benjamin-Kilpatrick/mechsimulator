@@ -1,7 +1,7 @@
 import os
 import matplotlib.backends.backend_pdf as plt_pdf
 from sim import util as sim_util
-from io.exp import ALLOWED_UNITS
+from serial.exp import ALLOWED_UNITS
 
 
 def build_pdf(figs_axes, filename='output.pdf', path=None):

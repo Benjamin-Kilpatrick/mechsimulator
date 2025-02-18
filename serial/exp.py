@@ -4,7 +4,7 @@ Parses Excel files containing experimental data to obtain exp_set dictionaries
 
 import pandas as pd
 import numpy as np
-from io import spc as spc_parser, exp_checker
+from serial import spc as spc_parser, exp_checker, parser_util
 
 # Allowed physical quantities (keys) and:
 # (1) corresponding allowed units
@@ -132,7 +132,7 @@ def read_info_sheet_new(fname):
         group = row[0]
         # Note: this if/else is necessary because openpyxl returns some rows
         # that are all NaNs
-        if isin3stance(group, str):
+        if isinstance(group, str):
             assert group in exp_checker.ALLOWED_INFO_GROUPS, (
 
 
@@ -426,7 +426,7 @@ def _time_series(row, sheet_type='exp', value_and_series=False):
         series[:] = row[ncols:] 
         val = [raw_val, series]
     # If raw_val is blank, assume the row contains a time series
-    elif util.chk_entry(raw_val) is None:
+    elif parser_util.chk_entry(raw_val) is None:
         npoints = len(row) - ncols  # num of time-resolved datapoints
         val = np.zeros(npoints)
         val[:] = row[ncols:]
@@ -627,7 +627,7 @@ def convert_units(raw_val, quant, units):
         return single_conv_val
 
     # If the units are blank or '-', don't convert
-    chkd_entry = util.chk_entry(units)
+    chkd_entry = parser_util.chk_entry(units)
     if chkd_entry is None:
         # Check if the quantity should have units assigned
         if raw_val != 'bal' and quant != 'phi':  # 'bal' = 'conc' but needs no units
@@ -681,9 +681,9 @@ def _check_bounds(low_bnd, upp_bnd, bnd_type):
         '-'; if so, return None. If not, leave unchanged
     """
 
-    low_bnd = util.chk_entry(low_bnd)
-    upp_bnd = util.chk_entry(upp_bnd)
-    bnd_type = util.chk_entry(bnd_type)
+    low_bnd = parser_util.chk_entry(low_bnd)
+    upp_bnd = parser_util.chk_entry(upp_bnd)
+    bnd_type = parser_util.chk_entry(bnd_type)
 
     return low_bnd, upp_bnd, bnd_type
 

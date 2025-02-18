@@ -12,3 +12,4 @@ environment.yaml
 fake-install.sh
 meta.yaml
 setup.py
+.env
