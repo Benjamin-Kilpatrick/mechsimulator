@@ -1,7 +1,6 @@
 import os
 import sys
 from typing import List
-
 from dotenv import load_dotenv
 
 from serial.exp_checker import ALLOWED_SIM_OPTS
