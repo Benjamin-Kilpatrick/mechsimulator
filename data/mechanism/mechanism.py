@@ -2,7 +2,7 @@ from typing import List
 
 import cantera
 
-from species import Species
+from data.mechanism.species import Species
 
 
 class Mechanism:
