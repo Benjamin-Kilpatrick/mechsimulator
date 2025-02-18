@@ -13,7 +13,8 @@ class MechanismReader:
 
     @staticmethod
     def read_mechanism_file(mechanism_file: str) -> cantera.Solution:
-        pass
+        solution: cantera.Solution = cantera.Solution(mechanism_file)
+        return solution
 
 
     @staticmethod
@@ -21,7 +22,7 @@ class MechanismReader:
             mechanism_file: str,
             species_file: str
     ) -> Mechanism:
-        solution: cantera.Solution = cantera.Solution(mechanism_file)
+        solution: cantera.Solution = MechanismReader.read_mechanism_file(mechanism_file)
         species: List[Species] = MechanismReader.read_species_file(species_file)
         return Mechanism(solution, species)
 
