@@ -136,8 +136,12 @@ def main():
     assert len(sys.argv) > 1, 'At least one input must be given!'
     load_dotenv()
     print(os.getcwd())
-    JOB_FILES = sys.argv[1:]
-    run_jobs(JOB_FILES)
+    job_files = sys.argv[1:]
+    # Read in jobs
+
+    # Run each job object
+    for job_file in job_files:
+        run_job(job_file, job_path=os.getenv("JOB_PATH"))
 
 
 if __name__=="__main__":
