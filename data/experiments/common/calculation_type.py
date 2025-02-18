@@ -6,3 +6,5 @@ class CalculationType(Enum):
     PATHWAY = 1
     SENSITIVITY = 2
 
+    INVALID = -1
+
