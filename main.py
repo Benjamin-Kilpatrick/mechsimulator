@@ -1,14 +1,11 @@
 import os
+import sys
 from typing import List
+from dotenv import load_dotenv
 
 from serial.exp_checker import ALLOWED_SIM_OPTS
 from serial.exp_checker import get_poss_inps
-
-JOB_PATH = './lib/jobs'
-EXP_PATH = './lib/exps'
-MECH_PATH = './lib/mechs'
-SPC_PATH = './lib/mechs'
-OUT_PATH = './lib/results'
+import serial
 
 def _mech_opts_lst(exp_set, gases, kwarg_dct) -> List[dict]:
     """ Creates a list of mech_opts, one for each mechanism
@@ -99,11 +96,11 @@ def run_job(job_file, job_path=None):
         :type job_path: str
     """
 
-    job_path = job_path or JOB_PATH
+    job_path = job_path or os.getenv("JOB_PATH")
     # CLEAN UP - too many calls
     # job_dct = parser.main.single_file(job_path, job_file, 'job')
     filename = os.path.join(job_path, job_file)
-    job_dct = io.job.load_job(filename)
+    job_dct = serial.job.load_job(filename)
     # END CLEANUP
     job_type = job_dct['job_type']
 
@@ -117,9 +114,9 @@ def run_job(job_file, job_path=None):
         x_srcs = job_dct['x_srcs']
         cond_srcs = job_dct['cond_srcs']
         # Load objects using the filenames
-        exp_sets = [io.exp.load_exp_set(os.path.join(EXP_PATH, filename)) for filename in exp_filenames] #parser.main.mult_exp_files(EXP_PATH, exp_filenames)
-        gases = [io.mech.load_solution_obj(os.path.join(MECH_PATH, filename)) for filename in mech_filenames] #parser.main.mult_mech_files(MECH_PATH, mech_filenames)
-        mech_spc_dcts = [io.spc.load_mech_spc_dct(os.path.join(MECH_PATH, filename)) for filename in spc_filenames] #parser.main.mult_files(SPC_PATH, spc_filenames, 'spc')
+        exp_sets = [serial.exp.load_exp_set(os.path.join(os.getenv("EXPERIMENT_PATH"), filename)) for filename in exp_filenames] #parser.main.mult_exp_files(EXP_PATH, exp_filenames)
+        gases = [serial.mech.load_solution_obj(os.path.join(os.getenv("MECHANISM_PATH"), filename)) for filename in mech_filenames] #parser.main.mult_mech_files(MECH_PATH, mech_filenames)
+        mech_spc_dcts = [serial.spc.load_mech_spc_dct(os.path.join(os.getenv("SPECIES_PATH"), filename)) for filename in spc_filenames] #parser.main.mult_files(SPC_PATH, spc_filenames, 'spc')
         check_inputs(job_dct, exp_sets)  # run some checks
 
         # Load the mech_opts_lst
@@ -127,9 +124,21 @@ def run_job(job_file, job_path=None):
         # TODO! Move below into calling function
 
         # Run the plotter code
-        figs_axes = io.plotter_main.mult_sets(exp_sets, gases, mech_spc_dcts,
+        figs_axes = serial.plotter_main.mult_sets(exp_sets, gases, mech_spc_dcts,
                                               calc_types, x_srcs, cond_srcs,
                                               mech_opts_lst=mech_opts_lst)
-        io.plotter_util.build_pdf(figs_axes)
+        serial.plotter_util.build_pdf(figs_axes)
     else:
         raise NotImplementedError(f"job_type {job_type}")
+
+def main():
+    assert len(sys.argv) > 1, 'At least one input must be given!'
+    load_dotenv()
+    print(os.getcwd())
+    JOB_FILES = sys.argv[1:]
+    run_jobs(JOB_FILES)
+
+
+if __name__=="__main__":
+    main()
+

@@ -2,8 +2,8 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter as Formatter
-from io import plotter_util
-from io.exp import ALLOWED_UNITS
+from serial import plotter_util
+from serial.exp import ALLOWED_UNITS
 
 # Define some stuff for plot formatting
 COLORS = ['Red', 'Blue', 'Green', 'Black', 'Magenta', 'Pink']
@@ -370,7 +370,7 @@ def build_figs_axes(exp_set, set_frmt, conds_src, mech_opts_lst, nmechs):
     mech_names = plotter_util._mech_names(mech_opts_lst, nmechs)
 
     # Get the titles and axis labels
-    cond_titles, xlabel, _ = util.get_cond_titles(exp_set, conds_src,
+    cond_titles, xlabel, _ = plotter_util.get_cond_titles(exp_set, conds_src,
                                                   xunit=xunit)
     targ_titles, ylabel, _ = plotter_util.get_targ_titles(exp_set, yunit=yunit)
 

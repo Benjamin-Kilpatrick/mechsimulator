@@ -2,12 +2,14 @@ import os
 import cantera as ct
 from PyPDF2 import PdfFileMerger, PdfFileReader
 
+from serial import plotter_util
+
 
 def single_set(set_end_tpx, set_xdata, exp_set, conds_source, gases,
                mech_names=None):
 
     element = 'C'
-    cond_titles, xlabel, xquant = util.get_cond_titles(exp_set, conds_source)
+    cond_titles, xlabel, xquant = plotter_util.get_cond_titles(exp_set, conds_source)
     print(cond_titles)
 
     # Loop over each mechanism and plot

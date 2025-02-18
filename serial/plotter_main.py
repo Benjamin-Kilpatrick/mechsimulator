@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from io import outcome, plotter_util, pathways
+from serial import outcome, plotter_util, pathways, plotter_sens
+import serial
+import sim
 
 # NOTE: should add this to default sim_opts! Of course, is it really a sim_opt?
 NRXNS = 25  # used for plotting of sensitivity and ROP
@@ -11,9 +13,9 @@ def mult_sets_filenames(exp_filenames, mech_filenames, spc_csv_filenames,
                         **kwargs):
 
     # Load objects by parsing files
-    exp_sets = [io.exp.load_exp_set(filename) for filename in exp_filenames] #parser.main.mult_files(exp_filenames, 'exp')
-    gases = [io.mech.load_solution_obj(filename) for filename in mech_filenames] #parser.main.mult_files(mech_filenames, 'mech')
-    mech_spc_dcts = [io.spc.load_mech_spc_dct(filename) for filename in spc_csv_filenames] # parser.main.mult_files(spc_csv_filenames, 'spc')
+    exp_sets = [serial.exp.load_exp_set(filename) for filename in exp_filenames] #parser.main.mult_files(exp_filenames, 'exp')
+    gases = [serial.mech.load_solution_obj(filename) for filename in mech_filenames] #parser.main.mult_files(mech_filenames, 'mech')
+    mech_spc_dcts = [serial.spc.load_mech_spc_dct(filename) for filename in spc_csv_filenames] # parser.main.mult_files(spc_csv_filenames, 'spc')
 
     # Create the mech options list by reading any optional keywords
     # mech_opts_lst = simulator.util._mech_opts_lst(exp_sets[0], gases, kwargs)
@@ -112,7 +114,7 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
         # Plot the data
         np.save('sens.npy', sorted_set_sens)
         np.save('sens_xdata.npy', set_xdata)
-        figs_axes = sens.single_set(sorted_set_sens[:, :NRXNS],
+        figs_axes = plotter_sens.single_set(sorted_set_sens[:, :NRXNS],
                                     set_xdata,
                                     sorted_set_rxns[:, :NRXNS],
                                     set_ref_results, exp_set, cond_src)
