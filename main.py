@@ -1,14 +1,14 @@
 import os
 from typing import List
 
-from io.exp_checker import ALLOWED_SIM_OPTS
-from io.exp_checker import get_poss_inps
+from serial.exp_checker import ALLOWED_SIM_OPTS
+from serial.exp_checker import get_poss_inps
 
-JOB_PATH = '../lib/jobs'
-EXP_PATH = '../lib/exps'
-MECH_PATH = '../lib/mechs'
-SPC_PATH = '../lib/mechs'
-OUT_PATH = '../lib/results'
+JOB_PATH = './lib/jobs'
+EXP_PATH = './lib/exps'
+MECH_PATH = './lib/mechs'
+SPC_PATH = './lib/mechs'
+OUT_PATH = './lib/results'
 
 def _mech_opts_lst(exp_set, gases, kwarg_dct) -> List[dict]:
     """ Creates a list of mech_opts, one for each mechanism
