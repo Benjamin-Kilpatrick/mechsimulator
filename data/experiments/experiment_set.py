@@ -10,12 +10,10 @@ class ExperimentSet:
     def __init__(self,
                  metadata: MetaData,
                  calculation_type: CalculationType,
-                 x_source: DataSource,
-                 condition_source: DataSource):
+                 source_mode: DataSource):
         self.metadata: MetaData = metadata
         self.calculation_type: CalculationType = calculation_type
-        self.x_source: DataSource = x_source
-        self.condition_source: DataSource = condition_source
+        self.source_mode: DataSource = source_mode
 
         self.simulated_experiments: List[Experiment] = []
 

@@ -16,11 +16,15 @@ class Utils:
         return FileType.INVALID
 
     @staticmethod
-    def parse_datasource(source: str) -> DataSource:
-        if source == 'plot':
-            return DataSource.SIMULATE
-        if source == 'exp':
-            return DataSource.MEASURED
+    def parse_datasource(x_source: str, condition_source: str) -> DataSource:
+        if x_source == 'plot' and condition_source == 'plot':
+            return DataSource.X_SIM_COND_SIM
+        if x_source == 'plot' and condition_source == 'exp':
+            return DataSource.X_SIM_COND_MEAS
+        if x_source == 'exp' and condition_source == 'exp':
+            return DataSource.X_MEAS_COND_MEAS
+        if x_source == 'exp' and condition_source == 'plot':
+            return DataSource.X_MEAS_COND_SIM
 
         return DataSource.INVALID
 

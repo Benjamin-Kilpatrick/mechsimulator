@@ -40,15 +40,13 @@ class JobReader:
         for i in range(num_exps):
             experiment_set_file: str = exps['exp_filenames'][i]
             calculation_type: CalculationType = Utils.parse_calculation_type(exps['calc_types'][i])
-            x_source: DataSource = Utils.parse_datasource(exps['x_srcs'][i])
-            condition_source: DataSource = Utils.parse_datasource(exps['cond_srcs'][i])
+            source_mode: DataSource = Utils.parse_datasource(exps['x_srcs'][i], exps['cond_srcs'][i])
 
             experiment_sets.append(
                 ExperimentReader.read_file(
                     experiment_set_file,
                     calculation_type,
-                    x_source,
-                    condition_source
+                    source_mode
                 )
             )
 

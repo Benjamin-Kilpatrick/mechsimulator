@@ -1,8 +1,6 @@
 import math
-from math import nan
 from typing import Dict, Any
 
-import numpy
 import pandas
 
 from data.experiments.common.calculation_type import CalculationType
@@ -18,15 +16,14 @@ class ExperimentReader:
     def read_file(
             experiment_file: str,
             calculation_type: CalculationType,
-            x_source: DataSource,
-            condition_source: DataSource
+            source_mode: DataSource
     ) -> ExperimentSet:
         file_type: FileType = Utils.get_file_type(experiment_file)
         full_filename: str = Utils.get_full_path(EnvPath.EXPERIMENT, experiment_file)
         if file_type == FileType.EXCEL:
-            return ExperimentReader.read_excel_file(full_filename, calculation_type, x_source, condition_source)
+            return ExperimentReader.read_excel_file(full_filename, calculation_type, source_mode)
         if file_type == FileType.YAML:
-            return ExperimentReader.read_yaml_file(full_filename, calculation_type, x_source, condition_source)
+            return ExperimentReader.read_yaml_file(full_filename, calculation_type, source_mode)
 
         raise Exception(f"File {experiment_file} is in an unsupported format, only .xlsl and .yaml files are supported")
 
@@ -34,8 +31,7 @@ class ExperimentReader:
     def read_excel_file(
             experiment_file: str,
             calculation_type: CalculationType,
-            x_source: DataSource,
-            condition_source: DataSource
+            source_mode: DataSource
     ) -> ExperimentSet:
         excel = pandas.ExcelFile(experiment_file, engine='openpyxl')
         info = excel.parse('info')
@@ -64,7 +60,6 @@ class ExperimentReader:
     def read_yaml_file(
             experiment_file: str,
             calculation_type: CalculationType,
-            x_source: DataSource,
-            condition_source: DataSource
+            source_mode: DataSource
     ) -> ExperimentSet:
         pass
