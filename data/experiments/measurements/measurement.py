@@ -3,7 +3,8 @@ from data.experiments.datapoint import Datapoint
 
 
 class Measurement:
-    def __init__(self, variable: Variable):
+    def __init__(self,
+                 variable: Variable):
         self.variable: Variable = variable
 
     def initialize_datapoint(self, data):
