@@ -7,28 +7,6 @@ import sim
 # NOTE: should add this to default sim_opts! Of course, is it really a sim_opt?
 NRXNS = 25  # used for plotting of sensitivity and ROP
 
-
-def mult_sets_filenames(exp_filenames, mech_filenames, spc_csv_filenames,
-                        calc_types, x_srcs, cond_srcs, headers=True,
-                        **kwargs):
-
-    # Load objects by parsing files
-    exp_sets = [serial.exp.load_exp_set(filename) for filename in exp_filenames] #parser.main.mult_files(exp_filenames, 'exp')
-    gases = [serial.mech.load_solution_obj(filename) for filename in mech_filenames] #parser.main.mult_files(mech_filenames, 'mech')
-    mech_spc_dcts = [serial.spc.load_mech_spc_dct(filename) for filename in spc_csv_filenames] # parser.main.mult_files(spc_csv_filenames, 'spc')
-
-    # Create the mech options list by reading any optional keywords
-    # mech_opts_lst = simulator.util._mech_opts_lst(exp_sets[0], gases, kwargs)
-    mech_opts_lst = None  # filler; will delete this entire function eventually, I think
-
-    # Pass the objects to the mult_sets function
-    figs_axes = mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
-                          cond_srcs, mech_opts_lst=mech_opts_lst,
-                          headers=headers)
-
-    return figs_axes
-
-
 def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
               cond_srcs, mech_opts_lst=None, headers=True):
     """ Plots any number of sets (against any number of mechanisms)
