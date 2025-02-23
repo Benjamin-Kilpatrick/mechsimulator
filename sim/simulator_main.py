@@ -103,8 +103,8 @@ def single_mech(exp_set, gas, mech_spc_dct, calc_type, cond_src, xdata,
     elif calc_type == 'rop':
         raise NotImplementedError('rop not ready!')
     else:  # 'pathways'
-        mech_ydata = pathways.single_mech(
-            conds_dct, gas, reac_type, ydata_shape)
+        outcome.single_mech(
+            conds_dct, gas, reac_type, 'pathways', None, ydata_shape)
 
     return mech_ydata
 
