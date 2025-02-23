@@ -1,3 +1,4 @@
+import csv
 import warnings
 from typing import List
 
@@ -12,8 +13,23 @@ from serial.common.utils import Utils
 class MechanismReader:
     @staticmethod
     def read_species_file(species_file: str) -> List[Species]:
-        warnings.warn('species parsing not implemented yet')
-        return []
+        out: List[Species] = []
+        with open(Utils.get_full_path(EnvPath.SPECIES, species_file)) as f:
+            reader = csv.reader(f, quotechar='\'', delimiter=',', quoting=csv.QUOTE_ALL)
+            columns = reader.__next__()
+            for row in reader:
+                name, smiles, inchi, mult, charge, excited = row
+                out.append(
+                    Species(
+                        name,
+                        smiles,
+                        inchi,
+                        int(mult),
+                        int(charge),
+                        excited == '1'
+                    )
+                )
+        return out
 
     @staticmethod
     def read_mechanism_file(mechanism_file: str) -> cantera.Solution:

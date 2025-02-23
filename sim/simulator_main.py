@@ -1,9 +1,8 @@
 import copy
 import numpy as np
 
+from serial.exp_checker import get_poss_inps
 from sim import util, outcome, pathways, sens
-
-from io.exp_checker import get_poss_inps
 
 
 # will add later; model after plotter.main

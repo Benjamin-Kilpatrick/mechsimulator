@@ -1,17 +1,17 @@
-from data.experiments.common.variable import Variable
+from data.common.value import Value
 from data.experiments.measurements.measurement import Measurement
 
 
 class Abs(Measurement):
     def __init__(self,
-                 variable: Variable,
+                 value: Value,
                  timestep: float,
                  end_time: float,
                  wavelength: float,
                  active_species: str,
                  abs_coefficient: float = 0.0,
                  path_length: float = 0.0):
-        Measurement.__init__(self, variable)
+        Measurement.__init__(self, value)
 
         self.timestep: float = timestep
         self.end_time: float = end_time

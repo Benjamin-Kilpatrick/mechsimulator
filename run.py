@@ -16,4 +16,6 @@ JOB_FILES = sys.argv[1:]
 main.run_jobs(JOB_FILES)"""
 
 load_dotenv()
-JobReader.read_file('benes_job.xlsx')
+job = JobReader.read_file('benes_job.xlsx')
+
+print(job)

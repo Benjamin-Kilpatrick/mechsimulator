@@ -5,10 +5,22 @@ from typing import Dict, Any, List, Optional
 import numpy
 import pandas
 
+from data.common.value import Value
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
 from data.experiments.common.temperature_profile import TemperatureProfile
+from data.experiments.common.variable import Variable
+from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
+from data.experiments.measurements.abs import Abs
+from data.experiments.measurements.concentration import Concentration
+from data.experiments.measurements.emission import Emission
+from data.experiments.measurements.half_life import HalfLife
+from data.experiments.measurements.ion import Ion
+from data.experiments.measurements.lfs import Lfs
+from data.experiments.measurements.measurement import Measurement
+from data.experiments.measurements.outlet import Outlet
+from data.experiments.measurements.pressure import Pressure
 from data.experiments.metadata import MetaData
 from data.experiments.reactions.constant_temperature_pressure import ConstantTemperaturePressure
 from data.experiments.reactions.jet_stream_reactor import JetStreamReactor
@@ -93,12 +105,38 @@ class ExperimentReader:
         meta_data: MetaData = MetaData(overall['version']['value'], overall['source']['value'],
                                        overall['description']['value'])
 
-        reactions: List[Reaction] = ExperimentReader.parse_reaction_excel(
+        variable_name: str = plot_data['variable']['value']
+        start: float = plot_data['start']['value']
+        end: float = plot_data['end']['value']
+        inc: float = plot_data['inc']['value']
+        variable: Variable = Variable(variable_name, start, end, inc)
+
+        reactions: List[Reaction] = ExperimentReader.parse_reaction_excel_info(
             overall['reac_type']['value'],
             num_conditions,
             plot_data
         )
-        print(reactions)
+
+        measurements: List[Measurement] = ExperimentReader.parse_measurement_excel_info(
+            overall['meas_type']['value'],
+            variable,
+            plot_data
+        )
+
+        sim_experiments: List[Experiment] = [
+            Experiment(
+                reactions[i],
+                measurements[i]
+            ) for i in range(num_conditions)
+        ]
+
+        return ExperimentSet(
+            meta_data,
+            calculation_type,
+            source_mode,
+            sim_experiments,
+            []
+        )
 
     @staticmethod
     def read_yaml_file(
@@ -109,11 +147,124 @@ class ExperimentReader:
         pass
 
     @staticmethod
-    def parse_measurement_excel(measurement_type: str, num_conditions: int, overall_data: Dict[str, Any], plot_data: Dict[str, Any]):
-        pass
+    def parse_measurement_excel_info(measurement_type: str, variable: Variable, plot_data: Dict[str, Any]) -> List[Measurement]:
+        if measurement_type == 'abs' or measurement_type == 'emis':
+            timestep: float = plot_data['timestep']['value']
+            end_time: float = plot_data['end_time']['value']
+            wavelength: float = plot_data['wavelength']['value']
+            active_species: str = plot_data['active_spc']['value']
+
+            if measurement_type == 'abs':
+                # TODO add support for abs_coeff and path_length
+
+                return [
+                    Abs(
+                        Value(
+                            variable.name,
+                            value, value, value
+                        ),
+                        timestep,
+                        end_time,
+                        wavelength,
+                        active_species
+                    ) for value in variable
+                ]
+            else:
+                return [
+                    Emission(
+                        Value(
+                            variable.name,
+                            value, value, value
+                        ),
+                        timestep,
+                        end_time,
+                        wavelength,
+                        active_species
+                    ) for value in variable
+                ]
+        if measurement_type == 'idt':
+            # TODO figure out idt targets
+            idt_target: str
+            idt_method: str = plot_data['idt_method']['value']
+            raise NotImplementedError
+        if measurement_type == 'outlet':
+            return [
+                Outlet(
+                    Value(
+                        variable.name,
+                        value, value, value
+                    ),
+                ) for value in variable
+            ]
+        if measurement_type == 'ion':
+            time_step: float = plot_data['time_step']['value']
+            end_time: float = plot_data['end_time']['value']
+            return [
+                Ion(
+                    Value(
+                        variable.name,
+                        value, value, value
+                    ),
+                    time_step,
+                    end_time
+                ) for value in variable
+            ]
+        if measurement_type == 'pressure':
+            time_step: float = plot_data['time_step']['value']
+            end_time: float = plot_data['end_time']['value']
+            return [
+                Pressure(
+                    Value(
+                        variable.name,
+                        value, value, value
+                    ),
+                    time_step,
+                    end_time
+                ) for value in variable
+            ]
+        if measurement_type == 'conc':
+            time_step: float = plot_data['time_step']['value']
+            end_time: float = plot_data['end_time']['value']
+            return [
+                Concentration(
+                    Value(
+                        variable.name,
+                        value, value, value
+                    ),
+                    time_step,
+                    end_time
+                ) for value in variable
+            ]
+        if measurement_type == 'lfs':
+            return [
+                Lfs(
+                    Value(
+                        variable.name,
+                        value, value, value
+                    )
+                ) for value in variable
+            ]
+        if measurement_type == 'half_life':
+            end_time: float = plot_data['end_time']['value']
+            target_species: str = plot_data['target_spc']['value']
+            return [
+                HalfLife(
+                    Value(
+                        variable.name,
+                        value, value, value
+                    ),
+                    end_time,
+                    target_species
+                ) for value in variable
+            ]
+
+        raise RuntimeError(f'Measurement type {measurement_type} not supported')
+            
+
+
 
     @staticmethod
-    def parse_reaction_excel(reaction: str, num_conditions: int, plot_data: Dict[str, Any]) -> List[Reaction]:
+    def parse_reaction_excel_info(reaction: str, num_conditions: int, plot_data: Dict[str, Any]) -> List[Reaction]:
         temperature = plot_data['temp']['value']
         pressure = plot_data['pressure']['value']
 
@@ -184,6 +335,8 @@ class ExperimentReader:
         if reaction == 'rcm':
             end_time: float = plot_data['end_time']['value']
             time: float = plot_data['time']['value']
+
+            # TODO need to extrapolate
             v_of_t: numpy.ndarray = numpy.asarray(plot_data['v_of_t']['other'])
             return [
                 RapidCompressionMachine(
