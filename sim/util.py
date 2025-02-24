@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from io.exp import ALLOWED_UNITS
+from serial.exp import ALLOWED_UNITS
 
 MEAS_TYPE_DIMS = {
     'ion':          4,

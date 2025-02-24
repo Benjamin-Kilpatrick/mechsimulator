@@ -1,9 +1,9 @@
 import copy
 import numpy as np
 
-from sim import util, outcome, pathways, sens
+from sim import util, outcome, sens
 
-from io.exp_checker import get_poss_inps
+from serial.exp_checker import get_poss_inps
 
 
 def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
