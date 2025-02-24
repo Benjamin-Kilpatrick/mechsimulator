@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from serial.exp_checker import ALLOWED_SIM_OPTS
 from serial.exp_checker import get_poss_inps
 import serial
+import sim
 
 def _mech_opts_lst(exp_set, gases, kwarg_dct) -> List[dict]:
     """ Creates a list of mech_opts, one for each mechanism
@@ -122,12 +123,23 @@ def run_job(job_file, job_path=None):
 
         # Load the mech_opts_lst
         mech_opts_lst = _mech_opts_lst(exp_sets[0], gases, job_dct['kwarg_dct'])
-        # TODO! Move below into calling function
+
+        # Run the simulation
+        # Calculate the simulation data
+
+        # !TODO move simulated_xy_data elsewhere -> (sim function)
+        simulated_xy_data = []
+        for exp_set, calc_type, x_src, cond_src in zip(exp_sets, calc_types, x_srcs, cond_srcs):
+            set_ydata, set_xdata = sim.simulator_main.single_set(
+                exp_set, gases, mech_spc_dcts, calc_type, x_src, cond_src,
+                mech_opts_lst=mech_opts_lst)
+            simulated_xy_data.append((set_xdata, set_ydata))
 
         # Run the plotter code
         figs_axes = serial.plotter_main.mult_sets(exp_sets, gases, mech_spc_dcts,
-                                              calc_types, x_srcs, cond_srcs,
+                                              calc_types, x_srcs, cond_srcs, simulated_xy_data,
                                               mech_opts_lst=mech_opts_lst)
+
         serial.plotter_util.build_pdf(figs_axes)
     else:
         raise NotImplementedError(f"job_type {job_type}")
