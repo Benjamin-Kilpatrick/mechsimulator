@@ -3,7 +3,7 @@ import numpy as np
 
 from sim import util, outcome, pathways, sens
 
-from io.exp_checker import get_poss_inps
+from serial.exp_checker import get_poss_inps
 
 
 # will add later; model after plotter.main
@@ -42,8 +42,9 @@ def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
     return set_ydata_lst, set_xdata_lst
 
 
-def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
-               cond_src, mech_opts_lst=None):
+# def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
+#                cond_src, mech_opts_lst=None):
+def single_set(exp_set, mech_opts_lst=None):
     """ Calculates the predictions of any number of mechanisms at the conditions
         of a single exp_set
 

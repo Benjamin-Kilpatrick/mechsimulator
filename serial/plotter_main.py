@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
+from data.experiments.common.calculation_type import CalculationType
+from data.experiments.experiment_set import ExperimentSet
 from serial import outcome, plotter_util, pathways, plotter_sens
 import serial
 import sim
@@ -15,14 +18,14 @@ def mult_sets_filenames(exp_filenames, mech_filenames, spc_csv_filenames,
     # Load objects by parsing files
     exp_sets = [serial.exp.load_exp_set(filename) for filename in exp_filenames] #parser.main.mult_files(exp_filenames, 'exp')
     gases = [serial.mech.load_solution_obj(filename) for filename in mech_filenames] #parser.main.mult_files(mech_filenames, 'mech')
-    mech_spc_dcts = [serial.spc.load_mech_spc_dct(filename) for filename in spc_csv_filenames] # parser.main.mult_files(spc_csv_filenames, 'spc')
+    species = [serial.spc.load_mech_spc_dct(filename) for filename in spc_csv_filenames] # parser.main.mult_files(spc_csv_filenames, 'spc')
 
     # Create the mech options list by reading any optional keywords
     # mech_opts_lst = simulator.util._mech_opts_lst(exp_sets[0], gases, kwargs)
     mech_opts_lst = None  # filler; will delete this entire function eventually, I think
 
     # Pass the objects to the mult_sets function
-    figs_axes = mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
+    figs_axes = mult_sets(exp_sets, gases, species, calc_types, x_srcs,
                           cond_srcs, mech_opts_lst=mech_opts_lst,
                           headers=headers)
 
@@ -59,13 +62,14 @@ def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
     return figs_axes
 
 
-def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
-               cond_src, mech_opts_lst=None):
+# def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
+#                cond_src, mech_opts_lst=None):
+def single_set(experiment_set: ExperimentSet, gases, mech_opts_lst=None):
     """ Plots a single set (i.e., with any number of mechanisms)
 
-        :param exp_set:
+        :param experiment_set:
         :param gases:
-        :param mech_spc_dcts:
+        :param species:
         :param calc_type:
         :param x_src:
         :param cond_src:
@@ -73,18 +77,18 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
         :return:
     """
 
-    if calc_type == 'outcome':
+    if experiment_set.calculation_type == CalculationType.OUTCOME:
         # Calculate the simulation data
         set_ydata, set_xdata = sim.simulator_main.single_set(
-            exp_set, gases, mech_spc_dcts, 'outcome', x_src, cond_src,
+            experiment_set, gases, species, 'outcome', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         # Plot the data
-        figs_axes = outcome.single_set(set_ydata, set_xdata, exp_set,
+        figs_axes = outcome.single_set(set_ydata, set_xdata, experiment_set,
                                        cond_src, mech_opts_lst=mech_opts_lst)
         # Send the data to the writer
         # EDIT: just writing to .npy files for now...
-        source = exp_set['overall']['source']
-        description = exp_set['overall']['description']
+        source = experiment_set['overall']['source']
+        description = experiment_set['overall']['description']
         np.save(f'results_{source}_{description}.npy', set_ydata)
         np.save(f'results_xdata_{source}_{description}.npy', set_xdata)
         # this is broken...
@@ -94,46 +98,46 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
         #    writer.sim_data.write_mech_results_time(
         #        exp_set, set_ydata, set_xdata, cond_src)
 
-    elif calc_type == 'sens':
+    elif experiment_set.calculation_type == CalculationType.SENSITIVITY:
         # Calculate the sensitivity coefficients
         set_sens, set_xdata = sim.simulator_main.single_set(
-            exp_set, gases, mech_spc_dcts, 'sens', x_src, cond_src,
+            experiment_set, gases, species, 'sens', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         # Sort the sensitivity coefficients
         sorted_set_sens, sorted_set_rxns = sim.sort_sens.sort_single_set(
             set_sens, gases)
         # Remove endpoints if a JSR; super hacky :(
-        if exp_set['overall']['reac_type'] == 'jsr':
+        if experiment_set['overall']['reac_type'] == 'jsr':
             sorted_set_sens[:, :, 0, :] = np.nan
             sorted_set_sens[:, :, -1, :] = np.nan
         # Calculate the reference results (having to do this twice; once inside
         # sens and once here. Could do once and then pass to the sens code)
         set_ref_results, _ = sim.simulator_main.single_set(
-            exp_set, gases, mech_spc_dcts, 'outcome', x_src, cond_src,
+            experiment_set, gases, species, 'outcome', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         # Plot the data
         np.save('sens.npy', sorted_set_sens)
         np.save('sens_xdata.npy', set_xdata)
         figs_axes = plotter_sens.single_set(sorted_set_sens[:, :NRXNS],
-                                    set_xdata,
+                                            set_xdata,
                                     sorted_set_rxns[:, :NRXNS],
-                                    set_ref_results, exp_set, cond_src)
+                                            set_ref_results, experiment_set, cond_src)
         # Send the data to the writer
-        if exp_set['overall']['meas_type'] in ('idt',):
-            targs = exp_set['plot']['idt_targ'][0]
+        if experiment_set['overall']['meas_type'] in ('idt',):
+            targs = experiment_set['plot']['idt_targ'][0]
         else:
-            targs = exp_set['spc'].keys()
+            targs = experiment_set['spc'].keys()
         # targs = ['pressure',]
         #writer.new_sens.mult_mechs(sorted_set_sens, sorted_set_rxns, targs,
         #                           set_xdata, set_ref_results)
 
-    elif calc_type == 'pathways':
+    elif experiment_set.calculation_type == CalculationType.PATHWAY:
         # Obtain the end states of each simulation; has shape (nmechs, nconds)
         set_end_tpx, set_xdata = sim.simulator_main.single_set(
-            exp_set, gases, mech_spc_dcts, 'pathways', x_src, cond_src,
+            experiment_set, gases, species, 'pathways', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         figs_axes = pathways.single_set(
-            set_end_tpx, set_xdata, exp_set, cond_src, gases)
+            set_end_tpx, set_xdata, experiment_set, cond_src, gases)
     else:
         raise NotImplementedError(f"calc_type {calc_type} not implemented!")
 

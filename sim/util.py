@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from io.exp import ALLOWED_UNITS
+from serial.exp import ALLOWED_UNITS
 
 MEAS_TYPE_DIMS = {
     'ion':          4,
@@ -296,7 +296,7 @@ def get_mech_info(exp_set, calc_type, x_src, cond_src, gases):
     return shape, x_arrays, x_titles, xdata
 
 
-def check_srcs(x_src, cond_src):
+def check_srcs(x_src, cond_src):  # TODO: Remove this function. Check if enum is invalid
     """ Checks the inputs for the x_src and cond_src
 
     :param x_src:
