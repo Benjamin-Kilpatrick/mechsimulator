@@ -15,7 +15,16 @@ print(os.getcwd())
 JOB_FILES = sys.argv[1:]
 main.run_jobs(JOB_FILES)"""
 
-load_dotenv()
-job = JobReader.read_file('benes_job.xlsx')
+def test():
+    print('hi')
 
-print(job)
+def main():
+    load_dotenv()
+    job = JobReader.read_file('benes_job.xlsx')
+
+    print(job)
+
+    test()
+
+
+main()

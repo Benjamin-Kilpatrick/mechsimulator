@@ -17,6 +17,11 @@ from serial.reader.MechanismReader import MechanismReader
 class JobReader:
     @staticmethod
     def read_file(job_file: str) -> Job:
+        """
+        test
+        :param job_file:
+        :return:
+        """
         file_type: FileType = Utils.get_file_type(job_file)
         if file_type == FileType.EXCEL:
             return JobReader.read_excel_file(job_file)

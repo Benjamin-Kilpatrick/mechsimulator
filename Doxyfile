@@ -1,11 +1,27 @@
 PROJECT_NAME           = "MechSimulator"
 OUTPUT_DIRECTORY       = docs
-INPUT                  = .\mechsimulator
+INPUT                  = main.py run.py sim serial data
 RECURSIVE              = YES
 GENERATE_LATEX         = NO
-EXTRACT_ALL            = YES
-HAVE_DOT               = YES
 UML_LOOK               = YES
 FILTER_PATTERNS        = *.py=py_filter
+HAVE_DOT               = YES
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_PRIV_VIRTUAL   = YES
+EXTRACT_PACKAGE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES  # is already YES by default
+EXTRACT_LOCAL_METHODS  = YES  # only affects Objective-C code
+EXTRACT_ANON_NSPACES   = YES
+RESOLVE_UNNAMED_PARAMS = YES  # is already YES by default
+
+DOT_GRAPH_MAX_NODES    = 200
+
+CLASS_DIAGRAMS         = YES
+CLASS_GRAPH            = YES
+UML_LOOK               = YES
 CALL_GRAPH             = YES
 CALLER_GRAPH           = YES
+GRAPHICAL_HIERARCHY    = YES
