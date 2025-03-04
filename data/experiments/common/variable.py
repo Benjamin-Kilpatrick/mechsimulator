@@ -1,19 +1,27 @@
-class Variable:
-    def __init__(self, name: str, start: float, end: float, increment: float):
-        self.name = name
-        self.start = start
-        self.end = end
-        self.increment = increment
+from enum import Enum
 
-        self._curr: float = self.start
 
-    def __iter__(self):
-        self._curr = self.start
-        return self
-
-    def __next__(self) -> float:
-        if self._curr <= self.end:
-            out = self._curr
-            self._curr += self.increment
-            return out
-        raise StopIteration
+class Variable(Enum):
+    TIME_STEP = 0
+    END_TIME = 1
+    WAVELENGTH = 2
+    ACTIVE_SPECIES = 3
+    ABS_COEFFICIENT = 4
+    PATH_LENGTH = 5
+    IGNITION_DELAY_TARGETS = 6
+    IGNITION_DELAY_METHOD = 7
+    TARGET_SPECIES = 8
+    TEMPERATURE = 9
+    PRESSURE = 10
+    PHI = 11
+    DPDT = 12
+    LENGTH = 13
+    RES_TIME = 14
+    MDOT = 15
+    AREA = 16
+    VOLUME = 17
+    TIME = 18
+    V_OF_T = 19
+    X_PROFILE = 20
+    TIME_PROFILE = 21
+    TIME_PROFILE_SETPOINTS = 22
