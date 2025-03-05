@@ -8,12 +8,8 @@ from data.mixtures.compound import Compound
 
 class Experiment:
     def __init__(self,
-                 reaction: Reaction,
-                 measurement: Measurement,
                  variables: VariableSet,
                  compounds: List[Compound]):
-        self.reaction: Reaction = reaction
-        self.measurement: Measurement = measurement
         self.variables: VariableSet = variables
         self.compounds: List[Compound] = compounds
 

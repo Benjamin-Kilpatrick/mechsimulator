@@ -126,8 +126,6 @@ class ExperimentReader:
 
             measured_experiments.append(
                 Experiment(
-                    reaction,
-                    measurement,
                     exp_conditions,
                     exp_compounds
                 )
@@ -138,6 +136,8 @@ class ExperimentReader:
             calculation_type,
             source_mode,
             variable_range,
+            reaction,
+            measurement,
             simulated_species,
             simulated_compounds,
             measured_experiments
