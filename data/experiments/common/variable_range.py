@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy
+from typing_extensions import Any
 
 from data.experiments.common.variable import Variable
 from data.experiments.common.variable_set import VariableSet
@@ -29,3 +30,9 @@ class VariableRange:
             curr += self.inc
 
         return out
+
+    def get_variables(self) -> List[Variable]:
+        return self.variable_set.get_variables()
+
+    def get(self, variable: Variable) -> Any:
+        return self.variable_set.get(variable)

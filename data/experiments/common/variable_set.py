@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from typing_extensions import Self
 
@@ -22,3 +22,7 @@ class VariableSet:
         variable_set: VariableSet = VariableSet()
         variable_set.variable_set = self.variable_set.copy()
         return variable_set
+
+    def get_variables(self) -> List[Variable]:
+        return list(self.variable_set.keys())
+

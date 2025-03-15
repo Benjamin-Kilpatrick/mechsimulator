@@ -1,7 +1,10 @@
 from typing import List
 
+from typing_extensions import Any
+
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
+from data.experiments.common.variable import Variable
 from data.experiments.common.variable_range import VariableRange
 from data.experiments.common.variable_set import VariableSet
 from data.experiments.experiment import Experiment
@@ -52,3 +55,6 @@ class ExperimentSet:
             )
 
         return simulated
+
+    def get(self, variable: Variable) -> Any:
+        return self.variable_range.get(variable)

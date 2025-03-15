@@ -1,8 +1,6 @@
 from typing import List
 
 from data.experiments.common.variable_set import VariableSet
-from data.experiments.measurement import Measurement
-from data.experiments.reaction import Reaction
 from data.mixtures.compound import Compound
 
 
