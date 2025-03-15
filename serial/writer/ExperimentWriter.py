@@ -30,9 +30,9 @@ class ExperimentWriter:
             'simulation_conditions': {
                 'range': {
                     'type': experiment_set.variable_range.variable.name,
-                    'start': experiment_set.variable_range.start,
-                    'end': experiment_set.variable_range.end,
-                    'inc': experiment_set.variable_range.inc
+                    'start': f"{experiment_set.variable_range.start:D}",
+                    'end': f"{experiment_set.variable_range.end:D}",
+                    'inc': f"{experiment_set.variable_range.inc:D}"
                 },
                 'variables': []
             },
@@ -49,7 +49,7 @@ class ExperimentWriter:
             output_dict['simulation_conditions']['variables'].append(
                 {
                     'name': variable.name,
-                    'value': value
+                    'value': f"{value:D}" if value is not None else None
                 }
             )
 

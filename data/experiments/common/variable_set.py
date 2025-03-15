@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 
+from pint import Quantity
 from typing_extensions import Self
 
 from data.experiments.common.variable import Variable
@@ -7,12 +8,12 @@ from data.experiments.common.variable import Variable
 
 class VariableSet:
     def __init__(self):
-        self.variable_set: Dict[Variable, Any] = {}
+        self.variable_set: Dict[Variable, Quantity] = {}
 
-    def set(self, variable: Variable, value: Any):
+    def set(self, variable: Variable, value: Quantity):
         self.variable_set[variable] = value
 
-    def get(self, variable: Variable) -> Any:
+    def get(self, variable: Variable) -> Quantity:
         return self.variable_set[variable]
 
     def has(self, variable: Variable) -> bool:
