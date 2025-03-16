@@ -2,6 +2,9 @@ from enum import Enum
 
 
 class Measurement(Enum):
+    """
+    The different types of measurement
+    """
     ABS = 0
     EMISSION = 1
     IGNITION_DELAY_TIME = 2
