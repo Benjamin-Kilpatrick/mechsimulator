@@ -3,6 +3,7 @@ import warnings
 from typing import List
 
 import cantera
+from rdkit import RDLogger
 
 from data.mechanism.mechanism import Mechanism
 from data.mechanism.species import Species
@@ -11,6 +12,19 @@ from serial.common.utils import Utils
 
 
 class MechanismReader:
+    ALLOWED_COLUMN_NAMES = (
+        'name',
+        'smiles',
+        'inchi',
+        'inchikey',
+        'mult',
+        'charge',
+        'exc_flag',
+        'sens'
+    )
+    # Prevents some weird valence error warnings
+    _LOGGER = RDLogger.logger()
+    _LOGGER.setLevel(RDLogger.ERROR)
     @staticmethod
     def read_species_file(species_file: str) -> List[Species]:
         out: List[Species] = []

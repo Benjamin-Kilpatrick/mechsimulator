@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class Measurement(Enum):
-    ABS = 0
+    ABSORPTION = 0
     EMISSION = 1
     IGNITION_DELAY_TIME = 2
     OUTLET = 3

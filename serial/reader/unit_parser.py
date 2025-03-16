@@ -65,6 +65,9 @@ class UnitParser:
         },
         'phi': {
             '': _ureg.Quantity(1, '')
+        },
+        'other': {
+            'X': _ureg.Quantity(1, '')
         }
     }
 

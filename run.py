@@ -16,19 +16,23 @@ print(os.getcwd())
 JOB_FILES = sys.argv[1:]
 main.run_jobs(JOB_FILES)"""
 
+
 def test():
     print('hi')
 
+
 def main():
     load_dotenv()
-    job = JobReader.read_file('benes_job.xlsx')
+    file = sys.argv[1]
+    job = JobReader.read_file(file)
 
+    idx: int = 0
     for experiment_file in job.experiment_files:
-        ExperimentWriter.write_yaml(f'new_benes_{experiment_file.metadata.source}.yaml', experiment_file)
+        ExperimentWriter.write_yaml(f'{file.split(".")[0]}_{experiment_file.metadata.source}_{idx}.yaml',
+                                    experiment_file)
+        idx += 1
 
     print(job)
-
-    test()
 
 
 main()

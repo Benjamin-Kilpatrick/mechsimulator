@@ -1,8 +1,6 @@
 from typing import List
 
-import numpy
 from pint import Quantity
-from typing_extensions import Any
 
 from data.experiments.common.variable import Variable
 from data.experiments.common.variable_set import VariableSet

@@ -24,7 +24,8 @@ class ExperimentWriter:
                 'description': experiment_set.metadata.description
             },
             'calculation_type': experiment_set.calculation_type.name,
-            'source_mode': experiment_set.source_mode.name,
+            'x_source': experiment_set.x_source.name,
+            'condition_source': experiment_set.condition_source.name,
             'reaction': experiment_set.reaction.name,
             'measurement': experiment_set.measurement.name,
             'simulation_conditions': {

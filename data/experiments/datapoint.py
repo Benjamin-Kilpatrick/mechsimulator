@@ -1,6 +1,6 @@
 from typing import List
 
-from data.experiments.result import Result
+from data.experiments.results import Result
 from data.mixtures.compound import Compound
 
 
