@@ -6,8 +6,6 @@ import yaml
 from data.experiments.common.variable import Variable
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
-from yaml import dump
-
 from data.mechanism.species import Species
 from data.mixtures.compound import Compound
 

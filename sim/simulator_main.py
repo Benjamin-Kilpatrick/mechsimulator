@@ -4,13 +4,6 @@ import numpy as np
 from serial.exp_checker import get_poss_inps
 from sim import util, outcome, pathways, sens
 
-
-# will add later; model after plotter.main
-# EDIT: actually, will probably delete due to the addition of the runner pkg
-def mult_sets_filenames():
-    pass
-
-
 def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
               cond_srcs, mech_opts_lst=None):
     """ Runs multiple experimental sets against multiple mechanisms
