@@ -1,13 +1,19 @@
-from typing import List
+from typing import List, Set
+
+import numpy
+from pint import Quantity
+from typing_extensions import Any
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
+from data.experiments.common.variable import Variable
 from data.experiments.common.variable_range import VariableRange
 from data.experiments.common.variable_set import VariableSet
 from data.experiments.experiment import Experiment
 from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
 from data.experiments.reaction import Reaction
+from data.experiments.results import Results
 from data.mechanism.species import Species
 from data.mixtures.compound import Compound
 
@@ -19,8 +25,9 @@ class ExperimentSet:
     def __init__(self,
                  metadata: MetaData,
                  calculation_type: CalculationType,
-                 source_mode: DataSource,
-                 variable_range: VariableRange,
+                 x_source: DataSource,
+                 condition_source: DataSource,
+                 condition_range: VariableRange,
                  reaction: Reaction,
                  measurement: Measurement,
                  simulated_species: List[Species],
@@ -28,9 +35,10 @@ class ExperimentSet:
                  measured_experiments: List[Experiment]):
         self.metadata: MetaData = metadata
         self.calculation_type: CalculationType = calculation_type
-        self.source_mode: DataSource = source_mode
+        self.x_source: DataSource = x_source
+        self.condition_source: DataSource = condition_source
 
-        self.variable_range: VariableRange = variable_range
+        self.condition_range: VariableRange = condition_range
 
         self.reaction: Reaction = reaction
         self.measurement: Measurement = measurement
@@ -45,20 +53,47 @@ class ExperimentSet:
     def __repr__(self) -> str:
         return f"<ExperimentSet calculation_type:{self.calculation_type.name} reaction:{self.reaction.name}>"
 
-    def get_simulated_experiments(self) -> List[Experiment]:
-        """
-        Get the simulated experiments
-        :return: the simulated experiments as a list of Experiment
-        """
+    def generate_simulated_variable_conditions(self) -> List[Experiment]:
         simulated: List[Experiment] = []
-        conditions: List[VariableSet] = self.variable_range.generate()
+        conditions: List[VariableSet] = self.condition_range.generate()
         condition: VariableSet
         for condition in conditions:
             simulated.append(
                 Experiment(
                     condition,
-                    self.simulated_compounds
+                    self.simulated_compounds,
+                    Results()
                 )
             )
 
         return simulated
+
+    def generate_measured_variable_conditions(self) -> List[Experiment]:
+        return self.measured_experiments
+
+    def get(self, variable: Variable) -> Any:
+        return self.condition_range.get(variable)
+
+    def get_variable_x_data(self) -> numpy.ndarray:
+        if self.x_source == DataSource.SIMULATION:
+            num = (self.condition_range.end - self.condition_range.start) // self.condition_range.inc
+            return numpy.linspace(self.condition_range.start, self.condition_range.end, num, endpoint=True)
+        if self.x_source == DataSource.MEASURED:
+            condition_variable_range: List[Quantity] = []
+            experiment: Experiment
+            for experiment in self.measured_experiments:
+                condition_variable_range.append(experiment.conditions.get(self.condition_range.variable))
+            return numpy.asarray(condition_variable_range)
+
+    def get_time_x_data(self) -> numpy.ndarray:
+        if self.x_source == DataSource.SIMULATION:
+            end_time: Quantity = self.condition_range.get(Variable.END_TIME)
+            num = end_time // self.condition_range.get(Variable.TIME_STEP)
+            return numpy.linspace(0, end_time, num, endpoint=True)
+        if self.x_source == DataSource.MEASURED:
+            times: Set[Quantity] = set()
+            experiment: Experiment
+            for experiment in self.measured_experiments:
+                times.update(experiment.results.get_variable(Variable.TIME)[0])
+
+            return numpy.asarray(sorted(list(times)))

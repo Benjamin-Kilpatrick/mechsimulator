@@ -46,8 +46,10 @@ class JobReader:
             ExperimentReader.read_file(
                 experiment_set_file,
                 Utils.parse_calculation_type(calculation_type),
-                Utils.parse_datasource(x_srcs, cond_srcs)
-            ) for experiment_set_file, calculation_type, x_srcs, cond_srcs in
+                x_source,
+                Utils.parse_datasource(condition_source)
+            )
+            for experiment_set_file, calculation_type, x_source, condition_source in
             zip(exps['exp_filenames'], exps['calc_types'], exps['x_srcs'], exps['cond_srcs'])
         ]
 

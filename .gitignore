@@ -14,3 +14,5 @@ meta.yaml
 setup.py
 .env
 output.pdf
+*.yaml
+*.xlsl

@@ -1,0 +1,3 @@
+
+class YData:
+    pass
