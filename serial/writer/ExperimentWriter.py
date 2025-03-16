@@ -30,10 +30,10 @@ class ExperimentWriter:
             'measurement': experiment_set.measurement.name,
             'simulation_conditions': {
                 'range': {
-                    'type': experiment_set.variable_range.variable.name,
-                    'start': f"{experiment_set.variable_range.start:D}",
-                    'end': f"{experiment_set.variable_range.end:D}",
-                    'inc': f"{experiment_set.variable_range.inc:D}"
+                    'type': experiment_set.condition_range.variable.name,
+                    'start': f"{experiment_set.condition_range.start:D}",
+                    'end': f"{experiment_set.condition_range.end:D}",
+                    'inc': f"{experiment_set.condition_range.inc:D}"
                 },
                 'variables': []
             },
@@ -43,8 +43,8 @@ class ExperimentWriter:
         }
 
         variable: Variable
-        for variable in experiment_set.variable_range.get_variables():
-            value = experiment_set.variable_range.get(variable)
+        for variable in experiment_set.condition_range.get_variables():
+            value = experiment_set.condition_range.get(variable)
             if isinstance(value, numpy.ndarray):
                 value = value.tolist()
             output_dict['simulation_conditions']['variables'].append(
@@ -86,14 +86,18 @@ class ExperimentWriter:
         for experiment in experiment_set.measured_experiments:
             experiment_dict = {
                 'variables': [],
-                'compounds': []
+                'compounds': [],
+                'results': {
+                    'variables': {},
+                    'targets': {}
+                }
             }
 
-            for variable in experiment.variables.get_variables():
+            for variable in experiment.conditions.get_variables():
                 experiment_dict['variables'].append(
                     {
                         'name': variable.name,
-                        'value': experiment.variables.get(variable)
+                        'value': experiment.conditions.get(variable)
                     }
                 )
 
@@ -110,6 +114,12 @@ class ExperimentWriter:
                         'is_balanced': compound.is_balanced
                     }
                 )
+
+            for variable in experiment.results.get_variables():
+                experiment_dict['results']['variables'][variable.name] = experiment.results.get_variable(variable)
+
+            for target in experiment.results.get_targets():
+                experiment_dict['results']['targets'][target] = experiment.results.get_target(target)
 
         with open(experiment_file, 'w') as f:
             yaml.dump(output_dict, f)

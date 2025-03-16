@@ -24,7 +24,7 @@ class ExperimentSet:
                  calculation_type: CalculationType,
                  x_source: DataSource,
                  condition_source: DataSource,
-                 variable_range: VariableRange,
+                 condition_range: VariableRange,
                  reaction: Reaction,
                  measurement: Measurement,
                  simulated_species: List[Species],
@@ -35,7 +35,7 @@ class ExperimentSet:
         self.x_source: DataSource = x_source
         self.condition_source: DataSource = condition_source
 
-        self.variable_range: VariableRange = variable_range
+        self.condition_range: VariableRange = condition_range
 
         self.reaction: Reaction = reaction
         self.measurement: Measurement = measurement
@@ -49,7 +49,7 @@ class ExperimentSet:
 
     def generate_simulated_variable_conditions(self) -> List[Experiment]:
         simulated: List[Experiment] = []
-        conditions: List[VariableSet] = self.variable_range.generate()
+        conditions: List[VariableSet] = self.condition_range.generate()
         condition: VariableSet
         for condition in conditions:
             simulated.append(
@@ -66,23 +66,23 @@ class ExperimentSet:
         return self.measured_experiments
 
     def get(self, variable: Variable) -> Any:
-        return self.variable_range.get(variable)
+        return self.condition_range.get(variable)
 
     def get_variable_x_data(self) -> numpy.ndarray:
         if self.x_source == DataSource.SIMULATION:
-            num = (self.variable_range.end - self.variable_range.start) // self.variable_range.inc
-            return numpy.linspace(self.variable_range.start, self.variable_range.end, num, endpoint=True)
+            num = (self.condition_range.end - self.condition_range.start) // self.condition_range.inc
+            return numpy.linspace(self.condition_range.start, self.condition_range.end, num, endpoint=True)
         if self.x_source == DataSource.MEASURED:
             condition_variable_range: List[Quantity] = []
             experiment: Experiment
             for experiment in self.measured_experiments:
-                condition_variable_range.append(experiment.variables.get(self.variable_range.variable))
+                condition_variable_range.append(experiment.conditions.get(self.condition_range.variable))
             return numpy.asarray(condition_variable_range)
 
     def get_time_x_data(self) -> numpy.ndarray:
         if self.x_source == DataSource.SIMULATION:
-            end_time: Quantity = self.variable_range.get(Variable.END_TIME)
-            num = end_time // self.variable_range.get(Variable.TIME_STEP)
+            end_time: Quantity = self.condition_range.get(Variable.END_TIME)
+            num = end_time // self.condition_range.get(Variable.TIME_STEP)
             return numpy.linspace(0, end_time, num, endpoint=True)
         if self.x_source == DataSource.MEASURED:
             times: Set[Quantity] = set()

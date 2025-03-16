@@ -13,3 +13,5 @@ fake-install.sh
 meta.yaml
 setup.py
 .env
+*.yaml
+*.xlsl

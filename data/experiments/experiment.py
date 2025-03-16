@@ -7,10 +7,10 @@ from data.mixtures.compound import Compound
 
 class Experiment:
     def __init__(self,
-                 variables: VariableSet,
+                 conditions: VariableSet,
                  compounds: List[Compound],
                  results: Results):
-        self.variables: VariableSet = variables
+        self.conditions: VariableSet = conditions
         self.compounds: List[Compound] = compounds
         self.results: Results = results
 

@@ -12,18 +12,18 @@ class VariableRange:
                  start: Quantity,
                  end: Quantity,
                  inc: Quantity,
-                 variable_set: VariableSet):
+                 conditions: VariableSet):
         self.variable: Variable = variable
         self.start: Quantity = start
         self.end: Quantity = end
         self.inc: Quantity = inc
-        self.variable_set: VariableSet = variable_set
+        self.conditions: VariableSet = conditions
 
     def generate(self) -> List[VariableSet]:
         out: List[VariableSet] = []
         curr: Quantity = self.start
         while curr <= self.end:
-            variable_set: VariableSet = self.variable_set.clone()
+            variable_set: VariableSet = self.conditions.clone()
             variable_set.set(self.variable, curr)
             out.append(variable_set)
             curr += self.inc
@@ -31,7 +31,7 @@ class VariableRange:
         return out
 
     def get_variables(self) -> List[Variable]:
-        return self.variable_set.get_variables()
+        return self.conditions.get_variables()
 
     def get(self, variable: Variable) -> Quantity:
-        return self.variable_set.get(variable)
+        return self.conditions.get(variable)
