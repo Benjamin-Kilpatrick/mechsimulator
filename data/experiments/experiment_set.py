@@ -39,6 +39,9 @@ class ExperimentSet:
         # TODO implement this operation
         self.measured_experiments: List[Experiment] = measured_experiments
 
+    def __repr__(self) -> str:
+        return f"<ExperimentSet calculation_type:{self.calculation_type.name} reaction:{self.reaction.name}>"
+
     def get_simulated_experiments(self) -> List[Experiment]:
         simulated: List[Experiment] = []
         conditions: List[VariableSet] = self.variable_range.generate()

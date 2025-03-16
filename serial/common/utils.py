@@ -46,11 +46,23 @@ class Utils:
 
     @staticmethod
     def get_full_path(path: EnvPath, filename: str) -> str:
+        """
+        Takes an environment variable name enum and a file name. Returns the full path to the file.
+        This function relies upon the environment variables set by the user in the .env file.
+        :param path: The enum of which environment variable to check for the path
+        :param filename: The name of the file that should be located in the path
+        :return: The full path to the file
+        """
         prefix: str = os.getenv(path.value)
-        return prefix + '/' + filename
+        return os.path.join(prefix, filename)
 
     @staticmethod
     def parse_measurement_type(measurement_type: str) -> Measurement:
+        """
+        Map a measurement type string to a Measurement type enum
+        :param measurement_type: The measurement type string
+        :return: Measurement type enum
+        """
         if measurement_type == 'abs':
             return Measurement.ABS
         if measurement_type == 'emis':

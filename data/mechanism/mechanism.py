@@ -13,3 +13,6 @@ class Mechanism:
         self.solution: cantera.Solution = solution
         self.species: List[Species] = species
         self.mechanism_name = mechanism_name
+
+    def __repr__(self) -> str:
+        return f'<Mechanism {self.mechanism_name}>'

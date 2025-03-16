@@ -13,3 +13,4 @@ fake-install.sh
 meta.yaml
 setup.py
 .env
+output.pdf
