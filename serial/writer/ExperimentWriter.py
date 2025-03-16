@@ -6,10 +6,18 @@ from data.experiments.experiment_set import ExperimentSet
 from yaml import dump
 
 class ExperimentWriter:
+    """
+    Experiment writer class with static methods to write experiment data.
+    """
     @staticmethod
     def write_yaml(
             experiment_file: str,
             experiment_set: ExperimentSet):
+        """
+        Write experiment data to a yaml file
+        :param experiment_file: full path to where experiment file will be saved
+        :param experiment_set: experiment set
+        """
         output_dict: Dict = {
             'meta-data': {
                 'version': experiment_set.metadata.version,

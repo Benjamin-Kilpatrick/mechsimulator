@@ -22,14 +22,23 @@ from serial.common.env_path import EnvPath
 from serial.common.file_type import FileType
 from serial.common.utils import Utils
 
-
 class ExperimentReader:
+    """
+    Static class that holds methods used to read Experiment files
+    """
+
     @staticmethod
     def read_file(
             experiment_file: str,
             calculation_type: CalculationType,
             source_mode: DataSource
     ) -> ExperimentSet:
+        """
+        The top level method that reads the experiment file.
+        :param experiment_file: Path to the experiment file with either a ".yaml" or a ".xlsl" extension
+        :param calculation_type: Calculation type to use for this experiment
+        :param source_mode: Source mode to use for this experiment
+        """
         file_type: FileType = Utils.get_file_type(experiment_file)
         full_filename: str = Utils.get_full_path(EnvPath.EXPERIMENT, experiment_file)
         if file_type == FileType.EXCEL:
@@ -41,6 +50,12 @@ class ExperimentReader:
 
     @staticmethod
     def convert_excel_sheet_to_dict(sheet: DataFrame, out_dict: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        """
+        Converts a Excel sheet to a dictionary.
+        :param sheet: Excel sheet to convert
+        :param out_dict: the dict that is added to. The original dict will not be modified by this function
+        :return: the dict that has been converted
+        """
         return_dict: Dict[str, Dict[str, Any]] = out_dict.copy()
         for _, row in sheet.iterrows():
             group = None
@@ -86,6 +101,13 @@ class ExperimentReader:
             calculation_type: CalculationType,
             source_mode: DataSource
     ) -> ExperimentSet:
+        """
+        Read and Excel sheet from an Excel file and get experiment set.
+        :experiment_file: Path to the Excel file
+        :calculation_type: Calculation type to use for this experiment
+        :source_mode: Source mode to use for this experiment
+        :return: the experiment set that has been read
+        """
         excel = pandas.ExcelFile(experiment_file, engine='openpyxl')
         info: DataFrame = excel.parse('info')
         experiment_sheets: List[str] = list(filter(lambda x: x != 'info', excel.sheet_names))
@@ -149,10 +171,22 @@ class ExperimentReader:
             calculation_type: CalculationType,
             source_mode: DataSource
     ) -> ExperimentSet:
+        """
+        Read and YAML experiment file and get experiment set.
+        :param experiment_file: Path to the experiment file
+        :param calculation_type: Calculation type to use for this experiment
+        :param source_mode: Source mode to use for this experiment
+        :return: the experiment set that has been read
+        """
         pass
 
     @staticmethod
     def parse_species_excel(data: Dict[str, Any]) -> List[Species]:
+        """
+        :param data: Dictionary of data from an Excel file gotten by the convert_excel_sheet_to_dict function in the
+        spc section.
+        :return: List of Species objects
+        """
         species: List[Species] = []
         species_name: str
         for species_name in data.keys():
@@ -171,6 +205,12 @@ class ExperimentReader:
 
     @staticmethod
     def parse_compounds_excel(data: Dict[str, Any], species: List[Species]) -> List[Compound]:
+        """
+        :param data: Dictionary of data from an Excel file gotten by the convert_excel_sheet_to_dict function in the
+        mix section.
+        :param species: List of Species objects
+        :return: List of Compound objects
+        """
         species_lookup: Dict[str, Species] = {}
         for spc in species:
             species_lookup[spc.name] = spc
@@ -201,6 +241,13 @@ class ExperimentReader:
 
     @staticmethod
     def get_variable_excel(variable: Variable, data: Dict[str, Any], require: bool):
+        """
+        Load the variable form the Excel files loaded data
+        :param variable: Variable
+        :param data: Dictionary of data from an Excel file
+        :param require: whether the value is required for this variable
+        :return: ndarray or None if the value is optional and not found
+        """
         variable_name: str = Utils.convert_variable_excel_str(variable)
         if variable_name in data:
             var_data: Dict = data[variable_name]
@@ -240,6 +287,11 @@ class ExperimentReader:
 
     @staticmethod
     def read_all_variables_excel(data: Dict[str, Dict[str, Any]]) -> VariableSet:
+        """
+        Read all the variables from the Excel files loaded data dict
+        :param data: Dictionary of data from an Excel file
+        :return: VariableSet object
+        """
         variable_set: VariableSet = VariableSet()
 
         variable: Variable
@@ -255,6 +307,13 @@ class ExperimentReader:
             measurement: Measurement,
             variable: Variable,
             data: Dict[str, Any]) -> VariableSet:
+        """
+        :param reaction: Reaction
+        :param measurement: Measurement
+        :param variable: Variable
+        :param data: Dictionary of data from an Excel file
+        :return: VariableSet object
+        """
 
         variable_set: VariableSet = VariableSet()
 

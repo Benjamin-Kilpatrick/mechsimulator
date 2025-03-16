@@ -13,8 +13,16 @@ from serial.common.file_type import FileType
 
 
 class Utils:
+    """
+    A static class that contains utility functions used in the serial package.
+    """
     @staticmethod
     def get_file_type(filename: str) -> FileType:
+        """
+        Get the file type from a filename or path
+        :param filename: filename or path
+        :return: file type or INVALID if not '.yaml' or '.xlsx'
+        """
         if filename.endswith('.yaml'):
             return FileType.YAML
         if filename.endswith('.xlsx'):
@@ -23,6 +31,19 @@ class Utils:
 
     @staticmethod
     def parse_datasource(x_source: str, condition_source: str) -> DataSource:
+        """
+        A mapping of x source and condition source string pairs to DataSource enum
+        (x_source, condition_source) -> DataSource
+        ------------------------------------------
+        (plot, plot) -> X_SIM_COND_SIM
+        (plot, exp)  -> X_SIM_COND_MEAS
+        (exp, exp)   -> X_MEAS_COND_MEAS
+        (exp, plot)  -> X_MEAS_COND_SIM
+        ------------------------------------------
+        :param x_source: x source
+        :param condition_source: condition source
+        :return: DataSource or INVALID if values not in the above mapping
+        """
         if x_source == 'plot' and condition_source == 'plot':
             return DataSource.X_SIM_COND_SIM
         if x_source == 'plot' and condition_source == 'exp':
@@ -36,6 +57,12 @@ class Utils:
 
     @staticmethod
     def parse_calculation_type(calculation_type: str) -> CalculationType:
+        """
+        Mapping the calculation_type str to CalculationType enum. Will default to CalculationType.INVALID if the str is
+        not in the mapping.
+        :param calculation_type: calculation_type str
+        :return: CalculationType
+        """
         if calculation_type == 'outcome':
             return CalculationType.OUTCOME
         if calculation_type == 'pathways':
@@ -59,7 +86,8 @@ class Utils:
     @staticmethod
     def parse_measurement_type(measurement_type: str) -> Measurement:
         """
-        Map a measurement type string to a Measurement type enum
+        Map a measurement type string to a Measurement type enum. Will create a SyntaxError if the measurement_type is
+        not a valid mapping.
         :param measurement_type: The measurement type string
         :return: Measurement type enum
         """
@@ -85,6 +113,12 @@ class Utils:
 
     @staticmethod
     def parse_reaction_type(reaction_type: str) -> Reaction:
+        """
+        Map the reaction_type str to Reaction enum. Will create a SyntaxError if the reaction_type is not in the
+        mapping.
+        :param reaction_type: The reaction type string
+        :return: Reaction enum
+        """
         if reaction_type == 'st':
             return Reaction.SHOCKTUBE
         if reaction_type == 'pfr':
@@ -99,6 +133,7 @@ class Utils:
             return Reaction.FREE_FLAME
         raise SyntaxError(f"Invalid reaction type: {reaction_type}")
 
+    # map from string to Variable
     VAR_CONVERT: Dict[str, Variable] = {
         'timestep': Variable.TIME_STEP,
         'end_time': Variable.END_TIME,
@@ -124,10 +159,18 @@ class Utils:
         't_profile': Variable.TIME_PROFILE,
         't_profile_setpoints': Variable.TIME_PROFILE_SETPOINTS
     }
+
+    # map from variable to string
     INV_VAR_CONVERT: Dict[Variable, str] = {v: k for k, v in VAR_CONVERT.items()}
 
     @classmethod
     def convert_excel_str_variable(cls: Self, variable: str) -> Variable:
+        """
+        Convert a variable to variable type string to a Variable enum. Will raise a KeyError if the variable string is
+        not in the mapping.
+        :param variable: The variable to convert
+        :return: Variable enum
+        """
         if variable in cls.VAR_CONVERT:
             return cls.VAR_CONVERT[variable]
         else:
@@ -135,6 +178,12 @@ class Utils:
 
     @classmethod
     def convert_variable_excel_str(cls: Self, variable: Variable) -> str:
+        """
+        Convert a variable to variable type string to a string. Will raise a KeyError if the variable string is not in
+        the mapping.
+        :param variable: The variable to convert
+        :return: string
+        """
         if variable in cls.INV_VAR_CONVERT:
             return cls.INV_VAR_CONVERT[variable]
         else:
