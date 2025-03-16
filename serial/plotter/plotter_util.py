@@ -1,6 +1,6 @@
 import os
 import matplotlib.backends.backend_pdf as plt_pdf
-from sim import util as sim_util
+from sim.old import util as sim_util
 from serial.exp import ALLOWED_UNITS
 
 

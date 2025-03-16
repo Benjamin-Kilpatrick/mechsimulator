@@ -2,7 +2,7 @@ import os
 import cantera as ct
 from PyPDF2 import PdfFileMerger, PdfFileReader
 
-from serial import plotter_util
+from serial.plotter import plotter_util
 
 
 def single_set(set_end_tpx, set_xdata, exp_set, conds_source, gases,

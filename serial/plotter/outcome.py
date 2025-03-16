@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter as Formatter
-from serial import plotter_util
+from serial.plotter import plotter_util
 from serial.exp import ALLOWED_UNITS
 
 # Define some stuff for plot formatting
@@ -371,7 +371,7 @@ def build_figs_axes(exp_set, set_frmt, conds_src, mech_opts_lst, nmechs):
 
     # Get the titles and axis labels
     cond_titles, xlabel, _ = plotter_util.get_cond_titles(exp_set, conds_src,
-                                                  xunit=xunit)
+                                                          xunit=xunit)
     targ_titles, ylabel, _ = plotter_util.get_targ_titles(exp_set, yunit=yunit)
 
     # Set the titles according to the grouping method

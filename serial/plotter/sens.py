@@ -1,5 +1,5 @@
 import pandas as pd
-from sim import sens as sim_sens
+from sim.old import sens as sim_sens
 
 
 def write_file(sens_coeffs, target_spcs, temps, rxn_names, ref_results,

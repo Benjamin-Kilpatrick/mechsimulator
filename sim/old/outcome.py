@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from sim import util, reactors
+from sim.old import util, reactors
 
 ELEMENT = 'C'
 

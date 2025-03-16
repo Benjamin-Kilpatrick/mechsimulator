@@ -1,5 +1,5 @@
 import numpy as np
-from sim import outcome
+from sim.old import outcome
 
 
 def single_mech(conds_dct, gas, reac_type, meas_type, xdata, ydata_shape,

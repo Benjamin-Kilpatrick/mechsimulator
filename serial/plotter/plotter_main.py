@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from serial import outcome, plotter_util, pathways, plotter_sens
+from serial.plotter import plotter_sens, plotter_util, outcome, pathways
 import serial
 import sim
 
@@ -75,7 +75,7 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
 
     if calc_type == 'outcome':
         # Calculate the simulation data
-        set_ydata, set_xdata = sim.simulator_main.single_set(
+        set_ydata, set_xdata = sim.old.simulator_main.single_set(
             exp_set, gases, mech_spc_dcts, 'outcome', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         # Plot the data
@@ -96,11 +96,11 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
 
     elif calc_type == 'sens':
         # Calculate the sensitivity coefficients
-        set_sens, set_xdata = sim.simulator_main.single_set(
+        set_sens, set_xdata = sim.old.simulator_main.single_set(
             exp_set, gases, mech_spc_dcts, 'sens', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         # Sort the sensitivity coefficients
-        sorted_set_sens, sorted_set_rxns = sim.sort_sens.sort_single_set(
+        sorted_set_sens, sorted_set_rxns = sim.old.sort_sens.sort_single_set(
             set_sens, gases)
         # Remove endpoints if a JSR; super hacky :(
         if exp_set['overall']['reac_type'] == 'jsr':
@@ -108,16 +108,16 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
             sorted_set_sens[:, :, -1, :] = np.nan
         # Calculate the reference results (having to do this twice; once inside
         # sens and once here. Could do once and then pass to the sens code)
-        set_ref_results, _ = sim.simulator_main.single_set(
+        set_ref_results, _ = sim.old.simulator_main.single_set(
             exp_set, gases, mech_spc_dcts, 'outcome', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         # Plot the data
         np.save('sens.npy', sorted_set_sens)
         np.save('sens_xdata.npy', set_xdata)
         figs_axes = plotter_sens.single_set(sorted_set_sens[:, :NRXNS],
-                                    set_xdata,
+                                            set_xdata,
                                     sorted_set_rxns[:, :NRXNS],
-                                    set_ref_results, exp_set, cond_src)
+                                            set_ref_results, exp_set, cond_src)
         # Send the data to the writer
         if exp_set['overall']['meas_type'] in ('idt',):
             targs = exp_set['plot']['idt_targ'][0]
@@ -129,7 +129,7 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
 
     elif calc_type == 'pathways':
         # Obtain the end states of each simulation; has shape (nmechs, nconds)
-        set_end_tpx, set_xdata = sim.simulator_main.single_set(
+        set_end_tpx, set_xdata = sim.old.simulator_main.single_set(
             exp_set, gases, mech_spc_dcts, 'pathways', x_src, cond_src,
             mech_opts_lst=mech_opts_lst)
         figs_axes = pathways.single_set(
