@@ -9,19 +9,17 @@ def single_mech(conds_dct, gas, reac_type, meas_type, xdata, ydata_shape,
                 prev_solns=None):
 
     if reac_type == 'jsr':
-        mech_ydata, _ = jsr(conds_dct, gas, meas_type, ydata_shape,
-                            prev_solns=prev_solns)
+        mech_ydata, _ = jsr          (conds_dct, gas, meas_type, ydata_shape, prev_solns=prev_solns)
     elif reac_type == 'st':
-        mech_ydata = st(conds_dct, gas, meas_type, xdata, ydata_shape)
+        mech_ydata = st              (conds_dct, gas, meas_type, xdata, ydata_shape)
     elif reac_type == 'pfr':
-        mech_ydata = pfr(conds_dct, gas, meas_type, xdata, ydata_shape)
+        mech_ydata = pfr             (conds_dct, gas, meas_type, xdata, ydata_shape)
     elif reac_type == 'free_flame':
-        mech_ydata, _ = free_flame(conds_dct, gas, meas_type, ydata_shape,
-                                   prev_solns=prev_solns)
+        mech_ydata, _ = free_flame   (conds_dct, gas, meas_type, ydata_shape, prev_solns=prev_solns)
     elif reac_type == 'const_t_p':
-        mech_ydata = const_t_p(conds_dct, gas, meas_type, xdata, ydata_shape)
+        mech_ydata = const_t_p       (conds_dct, gas, meas_type, xdata, ydata_shape)
     elif reac_type == 'rcm':
-        mech_ydata = rcm(conds_dct, gas, meas_type, xdata, ydata_shape)
+        mech_ydata = rcm             (conds_dct, gas, meas_type, xdata, ydata_shape)
     else:
         raise NotImplementedError(f"reac_type '{reac_type}' not working")
 

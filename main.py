@@ -27,8 +27,7 @@ def main():
     # Run each job object
     for job in jobs:
         for experiment_set in job.experiment_files:
-            for mechanism in job.mechanisms:
-                Simulator.run_experiment_set(experiment_set, mechanism)
+            Simulator.run_experiment_set(experiment_set, job.mechanisms)
 
     # Output jobs plots
     for job in jobs:
