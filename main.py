@@ -7,6 +7,8 @@ from serial.exp_checker import ALLOWED_SIM_OPTS
 from serial.exp_checker import get_poss_inps
 import serial
 
+import data
+
 def _mech_opts_lst(exp_set, gases, kwarg_dct) -> List[dict]:
     """ Creates a list of mech_opts, one for each mechanism
 

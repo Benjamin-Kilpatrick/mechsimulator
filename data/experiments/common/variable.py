@@ -2,6 +2,9 @@ from enum import Enum
 
 
 class Variable(Enum):
+    """
+    Variable types used in Experiments
+    """
     TIME_STEP = 0
     END_TIME = 1
     WAVELENGTH = 2

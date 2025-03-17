@@ -7,6 +7,9 @@ from data.experiments.common.variable_set import VariableSet
 
 
 class VariableRange:
+    """
+    The range for a variable used to change a single variable over time
+    """
     def __init__(self,
                  variable: Variable,
                  start: Quantity,
@@ -19,7 +22,13 @@ class VariableRange:
         self.inc: Quantity = inc
         self.conditions: VariableSet = conditions
 
+    def __repr__(self) -> str:
+        return f"<VariableRange variable type:{self.variable} ({self.start}, {self.end}) inc:{self.inc}>"
+
     def generate(self) -> List[VariableSet]:
+        """
+        Generate a list of variable sets
+        """
         out: List[VariableSet] = []
         curr: Quantity = self.start
         while curr <= self.end:

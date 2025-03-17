@@ -19,6 +19,9 @@ from data.mixtures.compound import Compound
 
 
 class ExperimentSet:
+    """
+    A set of experiments and their associated data
+    """
     def __init__(self,
                  metadata: MetaData,
                  calculation_type: CalculationType,
@@ -46,6 +49,9 @@ class ExperimentSet:
 
         # TODO implement this operation
         self.measured_experiments: List[Experiment] = measured_experiments
+
+    def __repr__(self) -> str:
+        return f"<ExperimentSet calculation_type:{self.calculation_type.name} reaction:{self.reaction.name}>"
 
     def generate_simulated_variable_conditions(self) -> List[Experiment]:
         simulated: List[Experiment] = []

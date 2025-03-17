@@ -8,3 +8,6 @@ class MetaData:
         self.source: str = source
         self.description: str = description
 
+    def __repr__(self):
+        return f"<MetaData version:{self.version} source:{self.source} description:{self.description}>"
+

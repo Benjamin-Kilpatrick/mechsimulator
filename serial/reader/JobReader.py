@@ -18,9 +18,9 @@ class JobReader:
     @staticmethod
     def read_file(job_file: str) -> Job:
         """
-        test
-        :param job_file:
-        :return:
+        Reads either an Excel or a Yaml file.
+        :param job_file: just the file name no path (the full path is found using environment variables)
+        :return: the Job object
         """
         file_type: FileType = Utils.get_file_type(job_file)
         if file_type == FileType.EXCEL:
@@ -32,46 +32,44 @@ class JobReader:
 
     @staticmethod
     def read_excel_file(job_file: str) -> Job:
+        """
+        read an Excel file
+        :param job_file: the file name of the Excel file
+        :return: the Job object
+        """
         excel = pandas.ExcelFile(Utils.get_full_path(EnvPath.JOB, job_file), engine='openpyxl')
         exps = excel.parse('exp')
         mechs = excel.parse('mech')
 
-        num_exps = exps.shape[0]
-        num_mechs = mechs.shape[0]
-
-        experiment_sets: List[ExperimentSet] = []
-        mechanisms: List[Mechanism] = []
-
-        for i in range(num_exps):
-            experiment_set_file: str = exps['exp_filenames'][i]
-            calculation_type: CalculationType = Utils.parse_calculation_type(exps['calc_types'][i])
-            x_source: DataSource = Utils.parse_datasource(exps['x_srcs'][i])
-            condition_source: DataSource = Utils.parse_datasource(exps['cond_srcs'][i])
-
-            experiment_sets.append(
-                ExperimentReader.read_file(
-                    experiment_set_file,
-                    calculation_type,
-                    x_source,
-                    condition_source
-                )
+        # get experiment sets
+        experiment_sets: List[ExperimentSet] = [
+            ExperimentReader.read_file(
+                experiment_set_file,
+                Utils.parse_calculation_type(calculation_type),
+                x_source,
+                Utils.parse_datasource(condition_source)
             )
+            for experiment_set_file, calculation_type, x_source, condition_source in
+            zip(exps['exp_filenames'], exps['calc_types'], exps['x_srcs'], exps['cond_srcs'])
+        ]
 
-        for i in range(num_mechs):
-            mechanism_filename: str = mechs['mech_filenames'][i]
-            species_filename: str = mechs['spc_filenames'][i]
-            mech_names: str = mechs['mech_names'][i]
-
-            mechanisms.append(
-                MechanismReader.read_file(
+        # get mechanisms
+        mechanisms: List[Mechanism] = [
+            MechanismReader.read_file(
                     mechanism_filename,
                     species_filename,
                     mech_names
-                )
-            )
+                ) for mechanism_filename, species_filename, mech_names in
+            zip(mechs['mech_filenames'], mechs['spc_filenames'], mechs['mech_names'])
+        ]
 
         return Job(experiment_sets, mechanisms)
 
     @staticmethod
     def read_yaml_file(job_file: str) -> Job:
+        """
+        read a Yaml file
+        :param job_file: the file name of the Yaml file
+        :return: the Job object
+        """
         pass
