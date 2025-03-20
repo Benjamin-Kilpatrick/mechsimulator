@@ -7,12 +7,18 @@ from data.mixtures.compound import Compound
 
 class Experiment:
     """
-    An Experiment has a variable set and a list of compounds
+    An aggregation of conditions, mixture of compounds and measured results
     """
     def __init__(self,
                  conditions: VariableSet,
                  compounds: List[Compound],
                  results: Results):
+        """
+        Constructor
+        :param conditions: The experimental conditions
+        :param compounds: The starting mixture of gas compounds
+        :param results: Measured results (may be empty for simulated experiments)
+        """
         self.conditions: VariableSet = conditions
         self.compounds: List[Compound] = compounds
         self.results: Results = results

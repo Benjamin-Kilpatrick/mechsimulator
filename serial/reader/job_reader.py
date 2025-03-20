@@ -2,16 +2,14 @@ from typing import List
 
 import pandas
 
-from data.experiments.common.calculation_type import CalculationType
-from data.experiments.common.data_source import DataSource
 from data.experiments.experiment_set import ExperimentSet
 from data.job.job import Job
 from data.mechanism.mechanism import Mechanism
 from serial.common.env_path import EnvPath
 from serial.common.file_type import FileType
 from serial.common.utils import Utils
-from serial.reader.ExperimentReader import ExperimentReader
-from serial.reader.MechanismReader import MechanismReader
+from serial.reader.experiment_reader import ExperimentReader
+from serial.reader.mechanism_reader import MechanismReader
 
 
 class JobReader:
@@ -46,7 +44,7 @@ class JobReader:
             ExperimentReader.read_file(
                 experiment_set_file,
                 Utils.parse_calculation_type(calculation_type),
-                x_source,
+                Utils.parse_datasource(x_source),
                 Utils.parse_datasource(condition_source)
             )
             for experiment_set_file, calculation_type, x_source, condition_source in

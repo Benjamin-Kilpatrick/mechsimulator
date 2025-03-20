@@ -4,6 +4,9 @@ import pint
 
 
 class UnitParser:
+    """
+    Static helper class to parse units
+    """
     _ureg = pint.UnitRegistry()
     UNIT_LOOKUP: Dict[str, Dict[str, pint.Quantity]] = {
         'temperature': {
@@ -73,6 +76,13 @@ class UnitParser:
 
     @classmethod
     def parse(cls, category: str, value: float, units: str) -> pint.Quantity:
+        """
+        Convert a value in a specific category given the units
+        :param category: category to check for conversion
+        :param value: the value, scalar or array
+        :param units: the units to convert to
+        :return: a pint quantity, scalar or array
+        """
         if value is None:
             return None
         if category not in cls.UNIT_LOOKUP:
@@ -83,6 +93,12 @@ class UnitParser:
 
     @classmethod
     def parse_all(cls, value: float, units: str) -> pint.Quantity:
+        """
+        Convert a value with no category given the units
+        :param value: the value, scalar or array
+        :param units: the units to convert to
+        :return: a pint quantity, scalar or array
+        """
         if value is None:
             return None
         category: str

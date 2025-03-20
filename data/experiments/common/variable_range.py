@@ -8,7 +8,7 @@ from data.experiments.common.variable_set import VariableSet
 
 class VariableRange:
     """
-    The range for a variable used to change a single variable over time
+    A generator of conditions based on a variable of interest
     """
     def __init__(self,
                  variable: Variable,
@@ -16,6 +16,14 @@ class VariableRange:
                  end: Quantity,
                  inc: Quantity,
                  conditions: VariableSet):
+        """
+        Constructor
+        :param variable: variable of interest
+        :param start: start value
+        :param end: end value
+        :param inc: increment
+        :param conditions: set of conditions
+        """
         self.variable: Variable = variable
         self.start: Quantity = start
         self.end: Quantity = end
@@ -27,7 +35,9 @@ class VariableRange:
 
     def generate(self) -> List[VariableSet]:
         """
-        Generate a list of variable sets
+        Generate a list of conditions, with the variable of interest condition changing from start to end with an
+        interval of increment
+        :return: a list of conditions
         """
         out: List[VariableSet] = []
         curr: Quantity = self.start
@@ -40,7 +50,16 @@ class VariableRange:
         return out
 
     def get_variables(self) -> List[Variable]:
+        """
+        Get a list of all set variables
+        :return: a list of all set variables
+        """
         return self.conditions.get_variables()
 
     def get(self, variable: Variable) -> Quantity:
+        """
+        Get the value of a set variable
+        :param variable: the type of variable
+        :return:
+        """
         return self.conditions.get(variable)

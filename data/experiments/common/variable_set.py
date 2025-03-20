@@ -8,9 +8,12 @@ from data.experiments.common.variable import Variable
 
 class VariableSet:
     """
-    A set of variables used in Experiments
+    A set of variable conditions
     """
     def __init__(self):
+        """
+        Constructor
+        """
         self.variable_set: Dict[Variable, Quantity] = {}
 
     def __repr__(self) -> str:
@@ -18,37 +21,41 @@ class VariableSet:
 
     def set(self, variable: Variable, value: Quantity):
         """
-        Set the variable to the value
-        :param variable: The variable to set
-        :param value: The value to set
+        Set a variable's value
+        :param variable: the type of variable
+        :param value: the value of the variable, either scalar or array
         """
         self.variable_set[variable] = value
 
     def get(self, variable: Variable) -> Quantity:
         """
-        Get the variable's value
-        :param variable: The variable to get
-        :return: The value
+        Get the value of a variable
+        :param variable: the type of variable
+        :return: the value of the variable, either scalar or array
         """
         return self.variable_set[variable]
 
     def has(self, variable: Variable) -> bool:
         """
-        Check if a variable has a value
-        :param variable: The variable to check
-        :return: bool True if the variable exists in the set otherwise false
+        Check if a variable has been set
+        :param variable: the type of variable
+        :return: True if the variable has been set, False otherwise
         """
         return variable in self.variable_set.keys()
 
     def clone(self) -> Self:
         """
-        Create a shallow copy of the variable_set
-        :return: The cloned variable_set
+        Create a shallow copy
+        :return: the shallow copy
         """
         variable_set: VariableSet = VariableSet()
         variable_set.variable_set = self.variable_set.copy()
         return variable_set
 
     def get_variables(self) -> List[Variable]:
+        """
+        Get a list of all set variables
+        :return: list of all set variables
+        """
         return list(self.variable_set.keys())
 

@@ -105,7 +105,7 @@ class ExperimentWriter:
                 experiment_dict['variables'].append(
                     {
                         'name': variable.name,
-                        'value': experiment.conditions.get(variable)
+                        'value': f'{experiment.conditions.get(variable):D}'
                     }
                 )
 
@@ -124,10 +124,12 @@ class ExperimentWriter:
                 )
 
             for variable in experiment.results.get_variables():
-                experiment_dict['results']['variables'][variable.name] = experiment.results.get_variable(variable)
+                experiment_dict['results']['variables'][variable.name] = f"{experiment.results.get_variable(variable):D}"
 
             for target in experiment.results.get_targets():
-                experiment_dict['results']['targets'][target] = experiment.results.get_target(target)
+                experiment_dict['results']['targets'][target] = f"{experiment.results.get_target(target):D}"
+
+            output_dict['measured_experiments'].append(experiment_dict)
 
         with open(experiment_file, 'w') as f:
             yaml.dump(output_dict, f)

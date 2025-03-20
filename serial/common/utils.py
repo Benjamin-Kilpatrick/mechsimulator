@@ -31,9 +31,15 @@ class Utils:
 
     @staticmethod
     def parse_datasource(source: str) -> DataSource:
-        if source == 'plot':
+        """
+        Mapping the source str to DataSource enum. Will default to DataSource.INVALID if the str is
+        not in the mapping.
+        :param source: source str
+        :return: DataSource
+        """
+        if source == 'plot' or source == 'plots':
             return DataSource.SIMULATION
-        if source == 'exp':
+        if source == 'exp' or source == 'exps':
             return DataSource.MEASURED
         return DataSource.INVALID
 
@@ -148,9 +154,9 @@ class Utils:
     @classmethod
     def convert_excel_str_variable(cls: Self, variable: str) -> Variable:
         """
-        Convert a variable to variable type string to a Variable enum. Will raise a KeyError if the variable string is
-        not in the mapping.
-        :param variable: The variable to convert
+        Convert a variable from an excel variable string to a Variable enum. Will raise a KeyError if the variable
+        string is not in the mapping.
+        :param variable: the variable string
         :return: Variable enum
         """
         if variable in cls.VAR_CONVERT:
@@ -161,9 +167,9 @@ class Utils:
     @classmethod
     def convert_variable_excel_str(cls: Self, variable: Variable) -> str:
         """
-        Convert a variable to variable type string to a string. Will raise a KeyError if the variable string is not in
-        the mapping.
-        :param variable: The variable to convert
+        Convert a variable from Variable enum string to an excel variable string. Will raise a KeyError if the variable
+        string is not in the mapping.
+        :param variable: the type of variable
         :return: string
         """
         if variable in cls.INV_VAR_CONVERT:

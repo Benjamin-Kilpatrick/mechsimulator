@@ -8,7 +8,7 @@ import sys
 
 from dotenv import load_dotenv
 
-from serial.reader.JobReader import JobReader
+from serial.reader.job_reader import JobReader
 from serial.writer.ExperimentWriter import ExperimentWriter
 
 """assert len(sys.argv) > 1, 'At least one input must be given!'

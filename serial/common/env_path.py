@@ -8,8 +8,14 @@ class EnvPath(Enum):
     serial.common.utils.
     """
     DOCS = 'DOCS_PATH'
+    """documentation path"""
     EXPERIMENT = 'EXPERIMENT_PATH'
+    """experiment files path"""
     MECHANISM = 'MECHANISM_PATH'
+    """mechanism files path"""
     JOB = 'JOB_PATH'
+    """job files path"""
     SPECIES = 'SPECIES_PATH'
+    """species files path"""
     RESULT = 'RESULT_PATH'
+    """output files directory path"""

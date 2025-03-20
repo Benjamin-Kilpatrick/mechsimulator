@@ -28,7 +28,7 @@ from serial.reader.unit_parser import UnitParser
 
 class ExperimentReader:
     """
-    Static class that holds methods used to read Experiment files
+    A static class responsible for parsing experiment files of both excel and yaml extensions
     """
 
     @staticmethod
@@ -40,12 +40,18 @@ class ExperimentReader:
     ) -> ExperimentSet:
         """
         The top level method that reads the experiment file.
-        :param experiment_file: Path to the experiment file with either a ".yaml" or a ".xlsl" extension
-        :param calculation_type: Calculation type to use for this experiment
-        :param source_mode: Source mode to use for this experiment
+        :param experiment_file: path to the experiment file with either a ".yaml" or a ".xlsl" extension
+        :param calculation_type: calculation type
+        :param x_source: x data source
+        :param condition_source: condition data source
+
+        :return: an experiment set parsed from experiment_file
         """
+
         file_type: FileType = Utils.get_file_type(experiment_file)
         full_filename: str = Utils.get_full_path(EnvPath.EXPERIMENT, experiment_file)
+
+        # decide which function to use to parse the file
         if file_type == FileType.EXCEL:
             return ExperimentReader.read_excel_file(full_filename, calculation_type, x_source, condition_source)
         if file_type == FileType.YAML:
@@ -56,33 +62,45 @@ class ExperimentReader:
     @staticmethod
     def convert_excel_sheet_to_dict(sheet: DataFrame, out_dict: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """
-        Converts a Excel sheet to a dictionary.
+        Converts an Excel sheet of experiment data to a dictionary to be easier to work with
         :param sheet: Excel sheet to convert
-        :param out_dict: the dict that is added to. The original dict will not be modified by this function
-        :return: the dict that has been converted
+        :param out_dict: contains the top level groups to get from the Excel sheet, will not be modified
+        :return: a dictionary that contains experiment file data from the given sheet
         """
         return_dict: Dict[str, Dict[str, Any]] = out_dict.copy()
         for _, row in sheet.iterrows():
             group = None
+
+            # group is sometimes also called type
             if 'group' in row:
                 group = row['group']
             else:
                 group = row['type']
+
+            # for each of the groups given in out_dict
             if group in return_dict.keys():
                 parameter = row['parameter']
+
+                # parse the species data independently
                 if group == 'spc':
                     return_dict['spc'][parameter] = [x for x in row[2:6]]
                 else:
+                    # get value, units, bounds and other
+                    # value is for scalar data, other is array types
                     value = row['value']
                     units = row['units']
                     bounds = (None, None)
                     bounds_type = None
                     other = None
+
+                    # if bounds are present, the excel sheet is formatted differently
                     if 'lower bound' in row and 'upper bound' in row and 'bound type':
                         bounds = (row['lower bound'], row['upper bound'])
                         bounds_type = row['bound type']
+                        # convert array type
                         other = [x for x in row[7:] if not math.isnan(x)]
                     else:
+                        # convert array type
                         other = [x for x in row[4:] if not math.isnan(x)]
 
                     parsed_row: Dict = {
@@ -92,11 +110,13 @@ class ExperimentReader:
                         'bounds': bounds,
                         'bounds_type': bounds_type
                     }
+                    # t_profile is special and is an array of arrays
                     if parameter == 't_profile':
                         if 't_profile' not in return_dict['plot']:
                             return_dict['plot']['t_profile'] = []
                         return_dict['plot']['t_profile'].append(parsed_row)
                     else:
+                        # otherwise set the single parameter
                         return_dict[group][parameter] = parsed_row
         return return_dict
 
@@ -108,11 +128,12 @@ class ExperimentReader:
             condition_source: DataSource
     ) -> ExperimentSet:
         """
-        Read and Excel sheet from an Excel file and get experiment set.
-        :experiment_file: Path to the Excel file
-        :calculation_type: Calculation type to use for this experiment
-        :source_mode: Source mode to use for this experiment
-        :return: the experiment set that has been read
+        Parse an experiment Excel sheet
+        :param experiment_file: path to the experiment file
+        :param calculation_type: calculation type
+        :param x_source: x source of experiment data
+        :param condition_source: condition source of experiment data
+        :return: an experiment set parsed from experiment_file
         """
         excel = pandas.ExcelFile(experiment_file, engine='openpyxl')
         info: DataFrame = excel.parse('info')
@@ -120,51 +141,63 @@ class ExperimentReader:
 
         info_dict: Dict[str, Dict[str, Any]] = {'spc': {}, 'overall': {}, 'plot': {}, 'mix': {}, 'plot_format': {}}
 
+        # info sheet data
         info_dict = ExperimentReader.convert_excel_sheet_to_dict(info, info_dict)
 
+        # plot group
         plot_data: Dict[str, Any] = info_dict['plot']
+
+        # variable of interest range
         start: Quantity = UnitParser.parse_all(plot_data['start']['value'], plot_data['start']['units'])
         end: Quantity = UnitParser.parse_all(plot_data['end']['value'], plot_data['end']['units'])
         inc: Quantity = UnitParser.parse_all(plot_data['inc']['value'], plot_data['inc']['units'])
-        # num_conditions = int((end - start) / inc) + 1
 
+        # metadata
         overall: Dict[str, Any] = info_dict['overall']
         meta_data: MetaData = MetaData(overall['version']['value'], overall['source']['value'],
                                        overall['description']['value'])
 
+        # reaction, measurement and variable of interest data structures
         reaction: Reaction = Utils.parse_reaction_type(overall['reac_type']['value'])
         measurement: Measurement = Utils.parse_measurement_type(overall['meas_type']['value'])
         variable: Variable = Utils.convert_excel_str_variable(plot_data['variable']['value'])
         variable_set: VariableSet = ExperimentReader.parse_variables_excel(reaction, measurement, variable, plot_data)
         variable_range: VariableRange = VariableRange(variable, start, end, inc, variable_set)
 
-        measured_experiments: List[Experiment] = []
-
+        # species and compounds parsed from experiment sheet
         simulated_species: List[Species] = ExperimentReader.parse_species_excel(info_dict['spc'])
         simulated_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(info_dict['mix'],
                                                                                      simulated_species)
+
+        measured_experiments: List[Experiment] = []
 
         sheet: str
         for sheet in experiment_sheets:
             exp_sheet: DataFrame = excel.parse(sheet)
             exp_dict: Dict[str, Dict[str, Any]] = {'overall': {}, 'conds': {}, 'mix': {}, 'result': {}}
+            # experiment numbered sheet data
             exp_dict = ExperimentReader.convert_excel_sheet_to_dict(exp_sheet, exp_dict)
 
+            # conditions and compounds
             exp_conditions: VariableSet = ExperimentReader.read_all_variables_excel(exp_dict['conds'])
             exp_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
                 result_dict = exp_dict['result'][result_name]
                 raw_value = result_dict['value']
+
+                # determine it is not scalar
                 if raw_value == '-':
                     raw_value = numpy.asarray(result_dict['other'])
 
+                # convert to Pint units
                 value: Quantity = UnitParser.parse_all(raw_value, result_dict['units'])
                 try:
-                    # use variable if possible
+                    # test to see if it is a variable
                     variable: Variable = Utils.convert_excel_str_variable(result_name)
                     results.set_variable(variable, value)
                 except KeyError:
+                    # it is a target (str name only)
                     results.set_target(result_name, value)
 
             measured_experiments.append(
@@ -207,9 +240,9 @@ class ExperimentReader:
     @staticmethod
     def parse_species_excel(data: Dict[str, Any]) -> List[Species]:
         """
-        :param data: Dictionary of data from an Excel file gotten by the convert_excel_sheet_to_dict function in the
-        spc section.
-        :return: List of Species objects
+        Parse species data
+        :param data: dictionary of species name to species data from the info sheet
+        :return: list of parsed Species
         """
         species: List[Species] = []
         species_name: str
@@ -230,10 +263,10 @@ class ExperimentReader:
     @staticmethod
     def parse_compounds_excel(data: Dict[str, Any], species: List[Species]) -> List[Compound]:
         """
-        :param data: Dictionary of data from an Excel file gotten by the convert_excel_sheet_to_dict function in the
-        mix section.
-        :param species: List of Species objects
-        :return: List of Compound objects
+        Parse compound data
+        :param data: dictionary of mixtures from the info sheet
+        :param species: list of all species
+        :return: list of compounds
         """
         species_lookup: Dict[str, Species] = {}
         for spc in species:
@@ -266,11 +299,13 @@ class ExperimentReader:
     @staticmethod
     def get_variable_excel(variable: Variable, data: Dict[str, Any], require: bool) -> Tuple[Any, float]:
         """
-        Load the variable form the Excel files loaded data
-        :param variable: Variable
-        :param data: Dictionary of data from an Excel file
-        :param require: whether the value is required for this variable
-        :return: ndarray or None if the value is optional and not found
+        Get a variable from the excel data, correctly parse if it is scalar or array type, and throw an exception
+        if the variable is required and not found
+        :param variable: the type of variable
+        :param data: dictionary of data from an experiment Excel file
+        :param require: whether the variable is required
+        :return: scalar/array, or None if the value is optional and not found
+        :exception: if variable is not found and require is True
         """
         variable_name: str = Utils.convert_variable_excel_str(variable)
         if variable_name in data:
@@ -312,16 +347,17 @@ class ExperimentReader:
     @staticmethod
     def read_all_variables_excel(data: Dict[str, Dict[str, Any]]) -> VariableSet:
         """
-        Read all the variables from the Excel files loaded data dict
-        :param data: Dictionary of data from an Excel file
-        :return: VariableSet object
+        Read all variables in the experiment data sheet dictionary
+        :param data: Dictionary of experiment data from an Excel file
+        :return: a set of all variable conditions
         """
         variable_set: VariableSet = VariableSet()
 
         variable: Variable
         for variable in Variable:
-            value: Any = ExperimentReader.get_variable_excel(variable, data, False)
-            variable_set.set(variable, value)
+            if Utils.convert_variable_excel_str(variable) in data:
+                value: Any = UnitParser.parse_all(*ExperimentReader.get_variable_excel(variable, data, False))
+                variable_set.set(variable, value)
 
         return variable_set
 
@@ -332,11 +368,12 @@ class ExperimentReader:
             variable: Variable,
             data: Dict[str, Any]) -> VariableSet:
         """
-        :param reaction: Reaction
-        :param measurement: Measurement
-        :param variable: Variable
+        Parse experiment conditions based on the reaction type and measurement type
+        :param reaction: reaction type
+        :param measurement: measurement type
+        :param variable: variable of interest
         :param data: Dictionary of data from an Excel file
-        :return: VariableSet object
+        :return: a set of all variable conditions, both required and optional variables
         """
 
         variable_set: VariableSet = VariableSet()
