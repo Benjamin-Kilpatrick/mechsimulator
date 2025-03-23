@@ -1,3 +1,5 @@
+import sys
+
 from mechsimulator.runner import util
 from mechsimulator import parser
 from mechsimulator import plotter
@@ -52,6 +54,9 @@ def run_job(job_file, job_path=None):
         # Load the mech_opts_lst
         mech_opts_lst = util._mech_opts_lst(exp_sets[0], gases,
                                             job_dct['kwarg_dct'])
+        
+        # only parse file
+        sys.exit(0)
         # Run the plotter code
         figs_axes = plotter.main.mult_sets(exp_sets, gases, mech_spc_dcts,
                                            calc_types, x_srcs, cond_srcs,
