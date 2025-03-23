@@ -243,7 +243,7 @@ def st(conds_dct, gas, meas_type, xdata, ydata_shape):
     p_of_ts = conds_dct['p_of_t']
 
     # Loop over all conditions
-    dtype = 'object' if meas_type == 'pathways' else 'float'
+    dtype = 'object' if meas_type == 'pathways' else 'float' # should never be pathways for shocktube or implemented?
     mech_ydata = np.ndarray(ydata_shape, dtype=dtype)
     for cond_idx in range(ydata_shape[0]):  # [0] gives # of conditions
         raw_concs, raw_pressures, raw_temps, raw_times, _, _ = reactors.st(
@@ -411,7 +411,7 @@ def process_jsr(raw_concs, end_gas, meas_type):
     if meas_type == 'outlet':
         cond_ydata = raw_concs
     elif meas_type == 'pathways':
-        cond_ydata = end_gas.TPX
+        cond_ydata = end_gas.TPX # temperature, pressure, all concentrations
     else:
         raise NotImplementedError(f"'{meas_type}' not working for JSR")
 

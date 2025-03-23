@@ -24,4 +24,4 @@ class Measurement(Enum):
     LFS = 7
     """LFS"""
     HALF_LIFE = 8
-    """ half life"""
+    """half life"""
