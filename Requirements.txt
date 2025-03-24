@@ -8,3 +8,5 @@ pypdf2~=3.0.1
 doxypypy~=0.8.8.7
 graphviz~=0.20.3
 python-dotenv~=1.0.1
+Pint~=0.21.1
+PyYAML~=6.0.2

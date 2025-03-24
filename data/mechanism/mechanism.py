@@ -6,6 +6,10 @@ from data.mechanism.species import Species
 
 
 class Mechanism:
+    """
+    The mechanism file thingy
+    TODO! More detail
+    """
     def __init__(self,
                  solution: cantera.Solution,
                  species: List[Species],
@@ -13,3 +17,6 @@ class Mechanism:
         self.solution: cantera.Solution = solution
         self.species: List[Species] = species
         self.mechanism_name = mechanism_name
+
+    def __repr__(self) -> str:
+        return f'<Mechanism {self.mechanism_name}>'
