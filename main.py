@@ -4,7 +4,7 @@ from typing import List
 from dotenv import load_dotenv
 
 from data.job.job import Job
-from serial.plotter import plotter_main, plotter_util
+from serial.plotter.plotter import Plotter
 from serial.reader.job_reader import JobReader
 from sim.Simulator import Simulator
 
@@ -31,10 +31,7 @@ def main():
 
     # Output jobs plots
     for job in jobs:
-        for experiment_set in job.experiment_files:
-            figs_axes = plotter_main.single_set(experiment_set, job.mechanisms)
-            plotter_util.build_pdf(figs_axes)
-
+        Plotter.plot(job)
 
 if __name__ == "__main__":
     main()
