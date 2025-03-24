@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from data.job.job import Job
 from serial.plotter import plotter_main, plotter_util
-from serial.reader.JobReader import JobReader
+from serial.reader.job_reader import JobReader
 from sim.Simulator import Simulator
 
 
