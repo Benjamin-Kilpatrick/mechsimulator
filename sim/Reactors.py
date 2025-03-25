@@ -63,5 +63,13 @@ class Reactors:
 
     @staticmethod
     def mix_str(mix, type):
+        """
+
+        """
         mix_string = '' # begin with empty string
-        component
+        component_count = len(mix[type]) # number of components
+        for i in range(component_count):
+            spc = mix[type][i]
+            if component_count > 1:
+                ratio = 4
+        return  mix_string
