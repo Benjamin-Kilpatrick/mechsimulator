@@ -6,30 +6,23 @@ from sim.ReactionSimulator import ReactionSimulator
 
 
 class SensitivitySimulator(ReactionSimulator):
-    @staticmethod
-    def simulate_experiment_set(experiment: ExperimentSet, mechanisms: List[Mechanism]):
+    def __init__(self):
+        super().__init__()
+
+    def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
-    @staticmethod
-    def rcm(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def plug_flow_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
-    @staticmethod
-    def const_t_p(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def jet_stream_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
-    @staticmethod
-    def free_flame(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def rapid_compression_machine(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
-    @staticmethod
-    def jsr(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def const_t_p(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
-    @staticmethod
-    def st(experiment_set: ExperimentSet, mechanism: Mechanism):
-        raise NotImplementedError
-
-    @staticmethod
-    def pfr(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
