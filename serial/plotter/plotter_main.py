@@ -59,6 +59,7 @@ def mult_sets(exp_sets, gases, mech_spc_dcts, calc_types, x_srcs,
     return figs_axes
 
 
+# TODO! Remove in future once plotter working
 def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
                cond_src, mech_opts_lst=None):
     """ Plots a single set (i.e., with any number of mechanisms)
