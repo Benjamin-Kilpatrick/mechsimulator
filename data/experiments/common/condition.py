@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Variable(Enum):
+class Condition(Enum):
     """
     Variable types used in Experiments
     """

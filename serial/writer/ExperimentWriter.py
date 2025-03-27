@@ -3,7 +3,7 @@ from typing import Dict
 import numpy
 import yaml
 
-from data.experiments.common.variable import Variable
+from data.experiments.common.condition import Condition
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from yaml import dump
@@ -38,7 +38,7 @@ class ExperimentWriter:
             'measurement': experiment_set.measurement.name,
             'simulation_conditions': {
                 'range': {
-                    'type': experiment_set.condition_range.variable.name,
+                    'type': experiment_set.condition_range.variable_of_interest.name,
                     'start': f"{experiment_set.condition_range.start:D}",
                     'end': f"{experiment_set.condition_range.end:D}",
                     'inc': f"{experiment_set.condition_range.inc:D}"
@@ -50,8 +50,8 @@ class ExperimentWriter:
             'measured_experiments': []
         }
 
-        variable: Variable
-        for variable in experiment_set.condition_range.get_variables():
+        variable: Condition
+        for variable in experiment_set.condition_range.get_conditions():
             value = experiment_set.condition_range.get(variable)
             if isinstance(value, numpy.ndarray):
                 value = value.tolist()
@@ -101,7 +101,7 @@ class ExperimentWriter:
                 }
             }
 
-            for variable in experiment.conditions.get_variables():
+            for variable in experiment.conditions.get_conditions():
                 experiment_dict['variables'].append(
                     {
                         'name': variable.name,
