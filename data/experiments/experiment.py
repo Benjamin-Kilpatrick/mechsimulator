@@ -1,5 +1,8 @@
 from typing import List
 
+from pint import Quantity
+
+from data.experiments.common.variable import Variable
 from data.experiments.common.variable_set import VariableSet
 from data.experiments.results import Results
 from data.mixtures.compound import Compound
@@ -28,3 +31,16 @@ class Experiment:
         for compound in self.compounds:
             out += f"\n\t{compound}"
         return out
+
+
+    def get_compounds(self) -> List[Compound]:
+        return self.compounds
+
+    def get_results(self) -> Results:
+        return self.results
+
+    def has(self, variable: Variable) -> bool:
+        return self.conditions.has(variable)
+
+    def get(self, variable: Variable) -> Quantity:
+        return self.conditions.get(variable)
