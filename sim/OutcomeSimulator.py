@@ -18,6 +18,7 @@ class OutcomeSimulator(ReactionSimulator):
     def process_rcm(experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
+
     @staticmethod
     def const_t_p(experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
