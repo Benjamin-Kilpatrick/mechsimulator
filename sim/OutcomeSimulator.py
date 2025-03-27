@@ -1,5 +1,6 @@
 from typing import List
 
+from data.experiments.common.variable import Variable
 from data.experiments.experiment_set import ExperimentSet
 from data.mechanism.mechanism import Mechanism
 from sim.ReactionSimulator import ReactionSimulator
@@ -7,7 +8,11 @@ from sim.ReactionSimulator import ReactionSimulator
 
 class OutcomeSimulator(ReactionSimulator):
     def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        raise NotImplementedError
+        for experiment in experiment_set.simulated_experiments:
+            conditions = experiment.variables
+            mixes = experiment.compounds
+            Reactors.const_t_p(
+                conditions.get(Variable.TEMPERATURE))
 
     def process_st(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
@@ -43,3 +48,10 @@ class OutcomeSimulator(ReactionSimulator):
         raise NotImplementedError
 
     def get_basic_conditions(self, experiment_set: ExperimentSet):
+        temps = experiment_set.variable_range.get(Variable.TEMPERATURE)
+        pressures = experiment_set.variable_range.get(Variable.PRESSURE)
+        times = experiment_set.variable_range.get(Variable.END_TIME) \
+            if experiment_set.variable_range.variable_set.has(Variable.END_TIME) \
+            else experiment_set.variable_range.get(Variable.RES_TIME)
+        target_species = experiment_set.variable_range.get(Variable.TARGET_SPECIES)
+        return temps, pressures, times, target_species
