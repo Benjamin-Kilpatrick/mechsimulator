@@ -21,8 +21,10 @@ class Condition(Enum):
     """ignition delay targets"""
     IGNITION_DELAY_METHOD = 7
     """ignitiion delay method"""
-    TARGET_SPECIES = 8
-    """target species"""
+
+    # not actually a variable
+    # TARGET_SPECIES = 8
+    # """target species"""
     TEMPERATURE = 9
     """temperature"""
     PRESSURE = 10

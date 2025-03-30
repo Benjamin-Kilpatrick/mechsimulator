@@ -1,6 +1,9 @@
 import os
-from typing import Dict
+from typing import Dict, Optional, Union
 
+import numpy
+import pint
+from pint import Quantity
 from typing_extensions import Self
 
 from data.experiments.common.calculation_type import CalculationType
@@ -176,3 +179,11 @@ class Utils:
             return cls.INV_VAR_CONVERT[variable]
         else:
             raise KeyError(f'{variable.name} not found')
+
+
+    @staticmethod
+    def convert_quantity_to_str(value: Quantity) -> str:
+        if value is not None and hasattr(value, 'shape') and value.shape[0] > 1:
+            return numpy.array2string(numpy.asarray(value), threshold=100000, max_line_width=float("inf"), precision=6, separator=',')
+        else:
+            return f"{value:D}" if value is not None else None

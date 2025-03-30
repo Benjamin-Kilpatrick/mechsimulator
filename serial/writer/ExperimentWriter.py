@@ -10,6 +10,7 @@ from yaml import dump
 
 from data.mechanism.species import Species
 from data.mixtures.compound import Compound
+from serial.common.utils import Utils
 
 
 class ExperimentWriter:
@@ -58,7 +59,7 @@ class ExperimentWriter:
             output_dict['simulation_conditions']['variables'].append(
                 {
                     'name': variable.name,
-                    'value': f"{value:D}" if value is not None else None
+                    'value': Utils.convert_quantity_to_str(value)
                 }
             )
 
@@ -105,7 +106,7 @@ class ExperimentWriter:
                 experiment_dict['variables'].append(
                     {
                         'name': variable.name,
-                        'value': f'{experiment.conditions.get(variable):D}'
+                        'value': Utils.convert_quantity_to_str(experiment.conditions.get(variable))
                     }
                 )
 
@@ -124,12 +125,12 @@ class ExperimentWriter:
                 )
 
             for variable in experiment.results.get_variables():
-                experiment_dict['results']['variables'][variable.name] = f"{experiment.results.get_variable(variable):D}"
+                experiment_dict['results']['variables'][variable.name] = Utils.convert_quantity_to_str(experiment.results.get_variable(variable))
 
             for target in experiment.results.get_targets():
-                experiment_dict['results']['targets'][target] = f"{experiment.results.get_target(target):D}"
+                experiment_dict['results']['targets'][target] = Utils.convert_quantity_to_str(experiment.results.get_target(target))
 
             output_dict['measured_experiments'].append(experiment_dict)
 
         with open(experiment_file, 'w') as f:
-            yaml.dump(output_dict, f)
+            yaml.dump(output_dict, f, width=100)

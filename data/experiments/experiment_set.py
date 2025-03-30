@@ -134,3 +134,6 @@ class ExperimentSet:
                 times.update(experiment.results.get_variable(Condition.TIME)[0])
 
             return numpy.asarray(sorted(list(times)))
+
+    def get_target_species(self) -> List[Species]:
+        return self.simulated_species
