@@ -4,15 +4,20 @@ from data.experiments.common.variable import Variable
 from data.experiments.experiment_set import ExperimentSet
 from data.mechanism.mechanism import Mechanism
 from sim.ReactionSimulator import ReactionSimulator
+from sim.Reactors import Reactors
 
 
 class OutcomeSimulator(ReactionSimulator):
     def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         for experiment in experiment_set.simulated_experiments:
-            conditions = experiment.variables
-            mixes = experiment.compounds
             Reactors.const_t_p(
-                conditions.get(Variable.TEMPERATURE))
+                experiment.conditions.get(Variable.TEMPERATURE),
+                experiment.conditions.get(Variable.PRESSURE),
+                experiment.experiment.compounds,
+                mechanism,
+                experiment.conditions.get(Variable.TARGET_SPECIES),
+                experiment.conditions.get(Variable.END_TIME)
+            )
 
     def process_st(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError

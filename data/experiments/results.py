@@ -3,8 +3,8 @@ from typing import Dict, List
 import numpy
 from pint import Quantity
 
-from data.experiments.common.variable import Variable
-from data.experiments.common.variable_set import VariableSet
+from data.experiments.common.condition import Condition
+from data.experiments.common.condition_set import ConditionSet
 
 
 class Results:
@@ -13,32 +13,32 @@ class Results:
     to their measured value (real or simulated)
     """
     def __init__(self):
-        self.variable_results: VariableSet = VariableSet()
+        self.condition_results: ConditionSet = ConditionSet()
         self.target_results: Dict[str, Quantity] = {}
 
-    def set_variable(self, variable: Variable, value: Quantity):
+    def set_variable(self, condition: Condition, value: Quantity):
         """
         Set a variable's value
-        :param variable: the type of variable
+        :param condition: the type of variable
         :param value: the value of the variable, either scalar or array
         :return: None
         """
-        self.variable_results.set(variable, value)
+        self.condition_results.set(condition, value)
 
-    def get_variable(self, variable: Variable) -> Quantity:
+    def get_variable(self, condition: Condition) -> Quantity:
         """
         Get the value of a variable
-        :param variable: the type of variable
+        :param condition: the type of variable
         :return: the value of the variable, either scalar or array
         """
-        return self.variable_results.get(variable)
+        return self.condition_results.get(condition)
 
-    def get_variables(self) -> List[Variable]:
+    def get_variables(self) -> List[Condition]:
         """
         Get a list of all set variables
         :return: a list of all set variables
         """
-        return self.variable_results.get_variables()
+        return self.condition_results.get_conditions()
 
     def set_target(self, name: str, value: Quantity):
         """
