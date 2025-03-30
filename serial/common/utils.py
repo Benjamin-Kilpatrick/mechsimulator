@@ -134,7 +134,6 @@ class Utils:
         'path_length': Condition.PATH_LENGTH,
         'idt_targ': Condition.IGNITION_DELAY_TARGETS,
         'idt_method': Condition.IGNITION_DELAY_METHOD,
-        'target_spc': Condition.TARGET_SPECIES,
         'temp': Condition.TEMPERATURE,
         'pressure': Condition.PRESSURE,
         'phi': Condition.PHI,

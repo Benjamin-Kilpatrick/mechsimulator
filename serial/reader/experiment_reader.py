@@ -319,7 +319,6 @@ class ExperimentReader:
                     variable == Condition.PATH_LENGTH or \
                     variable == Condition.IGNITION_DELAY_TARGETS or \
                     variable == Condition.IGNITION_DELAY_METHOD or \
-                    variable == Condition.TARGET_SPECIES or \
                     variable == Condition.TEMPERATURE or \
                     variable == Condition.PRESSURE or \
                     variable == Condition.LENGTH or \
@@ -542,13 +541,11 @@ class ExperimentReader:
         elif measurement == Measurement.LFS:
             pass
         elif measurement == Measurement.HALF_LIFE:
-            target_species: str = ExperimentReader.get_variable_excel(Condition.TARGET_SPECIES, data, True)
             end_time: float = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Condition.TARGET_SPECIES, target_species)
             variable_set.set(Condition.END_TIME, end_time)
         else:
             raise NotImplementedError(f"Measurement {measurement.name} is not implemented")
