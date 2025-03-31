@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter as Formatter
+from rdkit.Contrib.LEF.AddLabels import labels
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
@@ -66,6 +67,7 @@ MEASUREMENT_UNITS = {
 }
 
 COLORS = ['Red', 'Blue', 'Green', 'Black', 'Magenta', 'Pink']
+LINESTYLES = ['-', '--', '-.', ':']
 
 REACTION_DISPLAY_NAMES = {
     Reaction.SHOCKTUBE:                  'ST',
@@ -98,6 +100,9 @@ class Plotter:
         figs_axes = []
         for experiment_set in job.experiment_files:
             set_figs_axes = Plotter.plotter_main__single_set(job, experiment_set)
+            figs_axes.extend(set_figs_axes)
+
+        return figs_axes
 
     @staticmethod
     def plotter_main__single_set(job: Job, experiment_set: ExperimentSet):
@@ -107,6 +112,15 @@ class Plotter:
         calc_type = experiment_set.calculation_type
         if calc_type == CalculationType.OUTCOME:
             figs_axes = Plotter.plotter_outcome__single_set(job, experiment_set)
+
+            # TODO! handle with Class
+            # o.g.
+            # Send the data to the writer
+            # EDIT: just writing to .npy files for now...
+            # source = exp_set['overall']['source']
+            # description = exp_set['overall']['description']
+            # np.save(f'results_{source}_{description}.npy', set_ydata)
+            # np.save(f'results_xdata_{source}_{description}.npy', set_xdata)
         elif calc_type == CalculationType.SENSITIVITY:
             raise NotImplementedError(f'{calc_type} is not implemented in single_set')
         elif calc_type == CalculationType.PATHWAY:
@@ -136,10 +150,22 @@ class Plotter:
         }
         figs_axes = Plotter.plotter_outcome__build_figs_axes(job, experiment_set, set_frmt)
         # Loop over each mechanism and plot
-        # TODO! Don't do for every single set do once. Does this exist after the simulation in the experiment files?
+        # TODO! Don't do for every single set do once then pass in (or make object?).
+        #  Does this exist after the simulation in the experiment files?
         mech_xdata = experiment_set.condition_range.generate()  # xdata is same for all mechs
         for mech in job.mechanisms:
-            Plotter.plotter_outcome___mech_frmt(job, experiment_set, set_frmt, mech)
+            mech_frmt = Plotter.plotter_outcome___mech_frmt(job, experiment_set, set_frmt, mech)
+            figs_axes = Plotter.plotter_outcome__single_mech(job, experiment_set, figs_axes, mech_frmt, mech)
+
+        # Plot experimental data if present
+        # TODO! change for actually working
+        mech_frmt = Plotter.plotter_outcome___mech_frmt(job, experiment_set, set_frmt, mech)
+
+        # old way
+        # exp_ydata = exp_set['overall']['exp_ydata']
+        # exp_xdata = exp_set['overall']['exp_xdata']
+        # mech_frmt = _mech_frmt(exp_set, set_frmt, conds_src)
+        # figs_axes = single_mech(exp_ydata, exp_xdata, figs_axes, mech_frmt, exp_set)
 
 
     @staticmethod
@@ -301,6 +327,7 @@ class Plotter:
         plts_per_grp = len(plt_titles)
         pgs_per_grp = Plotter.plotter_outcome___pgs_per_grp(plts_per_grp, plts_per_pg)
         # Loop over each group and build the figures and axes
+        # TODO! convert figs_axes into object also convert axes
         figs_axes = []
         for grp_idx in range(ngrps):
             # Loop over each page within the group
@@ -378,6 +405,7 @@ class Plotter:
     def plotter_outcome___mech_frmt(job: Job, experiment_set: ExperimentSet, set_frmt, mechanism:Mechanism = None):
         conds_src = experiment_set.condition_source
         #TODO! Turn into proper object
+        # This function would be the basis for a constructor
         # Initialize the dict with some general information
         mech_frmt = {'rows_cols': set_frmt['rows_cols'],
                      'group_by': set_frmt['group_by'],
@@ -395,8 +423,38 @@ class Plotter:
         mech_frmt['xconv'] = Plotter.plotter_outcome___mech_frmt__get_conv_factors(xunit, xquant)
         mech_frmt['yconv'] = Plotter.plotter_outcome___mech_frmt__get_conv_factors(yunit, yquant)
 
+        if experiment_set.measurement in (Measurement.IGNITION_DELAY_TIME, Measurement.HALF_LIFE):
+            mech_frmt['xconv'] = 'inv' # TODO! WTF?
+
+        # Get color, marker, and order; depends on whether simulation or experiment
+        exp_on_top = set_frmt['exp_on_top']
+
+        if mechanism is not None: # if mechanism is not None then it's a simulation
+            # TODO! This is bad find a better way to look up
+            indx = job.mechanisms.index(mechanism)
+            mech_frmt['color'] = COLORS[indx % len(COLORS)]
+            mech_frmt['marker'] = ''
+            mech_frmt['order'] = indx # TODO! What is this for track to usage
+
+        else: # if mechanism is None then it's an experiment
+            mech_frmt['color'] = set_frmt['exp_color']
+            # If indicated, plot points
+            if set_frmt['plot_points']:
+                mech_frmt['marker'] = '.'
+            # Otherwise, plot lines
+            else:
+                mech_frmt['marker'] = ''
+            # Put the experiment either in front or in back
+            if exp_on_top:
+                mech_frmt['order'] = 1e3  # bigger than any possible number of mechs TODO! this is bad
+            else:
+                mech_frmt['order'] = -1  # negative to go behind all  TODO! this is also bad
+
+        return mech_frmt
+
     @staticmethod
     def plotter_outcome___mech_frmt__get_conv_factors(units, quant):
+        # TODO! This does not work probably go over with the M. to determine how to break up allowed units
         if units in Measurement:
             allowed_units = MEASUREMENT_UNITS[quant][0]
             conv_factors = MEASUREMENT_UNITS[quant][1]
@@ -405,8 +463,8 @@ class Plotter:
             idx = allowed_units.index(units)
             conv_factor = 1 / conv_factors[idx]  # conv_factor is the inverse
         elif units in Variable:
-            allowed_units = MEASUREMENT_UNITS[quant][0]
-            conv_factors = MEASUREMENT_UNITS[quant][1]
+            allowed_units = VARIABLE_UNITS[quant][0]
+            conv_factors = VARIABLE_UNITS[quant][1]
             assert units in allowed_units, (
                 f"'{units}' are not allowed units for the quantity '{quant}'")
             idx = allowed_units.index(units)
@@ -415,3 +473,191 @@ class Plotter:
             conv_factor = 1
 
         return conv_factor
+
+    @staticmethod
+    def plotter_outcome__single_mech(job: Job, experiment_set: ExperimentSet, figs_axes: List[Any], mech_frmt: dict, mech: Mechanism):
+        # Get info on how to organize the plots
+        ngrps, nplts, plts_per_pg, pgs_per_grp = Plotter.plotter_outcome__organize_set(
+            experiment_set, mech_frmt, mech)
+
+        # Loop over each group of pages
+        for grp_idx in range(ngrps):
+            # Loop over pages in each group
+            for pg_idx in range(pgs_per_grp):
+                fig_idx = grp_idx * pgs_per_grp + pg_idx
+                _, axs = figs_axes[fig_idx]
+                # Loop over plots on each page
+                for plt_idx_pg in range(plts_per_pg):
+                    plt_idx_grp = pg_idx * plts_per_pg + plt_idx_pg  # overall idx
+                    if plt_idx_grp < nplts:
+                        # data should be easy to access because of structure this is not needed?
+                        # plt_ydata = get_plt_ydata(mech_ydata, mech_frmt, grp_idx,
+                        #                           plt_idx_grp, exp_set)
+                        Plotter.plotter_outcome__single_plot(experiment_set, mech_frmt, mech, plt_idx_pg, axs[plt_idx_pg])
+                        # single_plot(plt_ydata, mech_xdata, axs[plt_idx_pg],
+                        #             mech_frmt, plt_idx_pg, exp_set, mech_idx)
+
+        return figs_axes
+
+    @staticmethod
+    def plotter_outcome__organize_set(experiment_set: ExperimentSet, mech_frmt: dict, mech: Mechanism):
+
+        ngrps, nplts = Plotter.plotter_outcome__organize_set___ngrps_nplts(experiment_set, mech_frmt, mech)
+        nrows, ncols = mech_frmt['rows_cols']
+        plts_per_pg = nrows * ncols  # maximum number of plots per page
+        pgs_per_grp = Plotter.plotter_outcome___pgs_per_grp(nplts, plts_per_pg)
+
+        return ngrps, nplts, plts_per_pg, pgs_per_grp
+
+    @staticmethod
+    def plotter_outcome__organize_set___ngrps_nplts(experiment_set: ExperimentSet, mech_frmt: dict, mech: Mechanism):
+        ndims = 2 # TODO! get the number of dimensions somehow o.g. np.ndim(mech_ydata)
+        group_by = mech_frmt['group_by']
+        meas_type = experiment_set.measurement
+
+        if ndims == 3:
+            # Get the numbers of conditions and targets
+            if meas_type == 'abs':
+                #nconds, _, _ = np.shape(mech_ydata)
+                nconds = Plotter.get_num_conds(experiment_set)
+                ntargs = 0#len(exp_set['plot']['wavelength'])
+            else:
+                #nconds, ntargs, _ = (0, 0, 0) #np.shape(mech_ydata)
+                nconds = Plotter.get_num_conds(experiment_set)
+                ntargs = Plotter.get_num_targs(experiment_set)
+            # Get the number of groups and plots
+            if group_by == 'cond':
+                ngrps, nplts = nconds, ntargs
+            else:  # 'target'
+                ngrps, nplts = ntargs, nconds  # flipped
+        else:  # ndims = 2
+            #_, ntargs = np.shape(mech_ydata)
+            ntargs = Plotter.get_num_targs(experiment_set)
+            ngrps, nplts = 1, ntargs  # all targets are treated as one group
+
+        return ngrps, nplts
+
+    # TODO! should a method like this be in ExperimentSet?
+    @staticmethod
+    def get_num_conds(experiment_set: ExperimentSet):
+        num_conds = 0
+
+        # TODO! is measured_experiments right or should it be simulated_experiments?
+        if len(experiment_set.simulated_experiments) > 0:
+            experiment = experiment_set.simulated_experiments[0]
+            num_conds = len(experiment.conditions.variable_set)
+
+        return num_conds
+
+    @staticmethod
+    def get_num_targs(experiment_set: ExperimentSet):
+        num_targs = 0
+
+        if len(experiment_set.simulated_experiments) > 0:
+            experiment = experiment_set.simulated_experiments[0]
+            num_targs = len(experiment.results.target_results)
+
+        return num_targs
+
+    @staticmethod
+    def plotter_outcome___pgs_per_grp(plts_per_grp, plts_per_pg):
+        """ Calculates the number of pages per group
+        """
+
+        if plts_per_grp % plts_per_pg == 0:  # if perfectly divisible, just divide
+            pgs_per_grp = int(plts_per_grp / plts_per_pg)
+        else:  # otherwise, add one (since int rounds down)
+            pgs_per_grp = int(plts_per_grp / plts_per_pg) + 1
+
+        return pgs_per_grp
+
+    @staticmethod
+    def plotter_outcome__single_plot(experiment_set: ExperimentSet, mech_frmt: dict, mech: Mechanism, plt_idx_pg, current_ax):
+
+        # Load info; inefficient to load for every plot, but looks cleaner
+        xlim = mech_frmt['xlim']
+        ylim = mech_frmt['ylim']
+        xscale = mech_frmt['xscale']
+        yscale = mech_frmt['yscale']
+        meas_type = experiment_set.measurement
+
+        # If on abs, flip order so total abs is first (i.e., the solid line)
+        if meas_type == Measurement.ABSORPTION:
+            # TODO! figure out flip
+            #plt_ydata = np.flip(plt_ydata, 0)
+            pass
+
+        # Loop over all lines and plot each
+        nlines = Plotter.plotter_outcome__single_plot___nlines(experiment_set)
+        labels = Plotter.plotter_outcome___labels(experiment_set, nlines, mech)
+
+        for line_idx in range(nlines):
+            Plotter.plotter_outcome__single_line(experiment_set, line_idx, current_ax, mech_frmt, labels)
+
+        # Do some formatting on the entire plot
+        if xlim is not None:
+            current_ax.set_xlim(xlim)
+        if ylim is not None:
+            current_ax.set_ylim(ylim)
+        current_ax.set_xscale(xscale)
+        current_ax.set_yscale(yscale)
+        if plt_idx_pg == 0 and nlines > 1:  # add legend on 1st plot if mult. lines
+            current_ax.legend()
+
+    @staticmethod
+    def plotter_outcome__single_plot___nlines(experiment_set: ExperimentSet) -> int:
+        return len(experiment_set.simulated_experiments)
+
+    @staticmethod
+    def plotter_outcome___labels(experiment_set: ExperimentSet, nlines, mechanism: Mechanism) -> List[str]:
+        meas_type = experiment_set.measurement
+        if nlines == 1:
+            labels = [None]
+        else:
+            if meas_type == Measurement.ABSORPTION:
+                if mechanism is None:
+                    labels = ['Exp., total'] + [None] * (nlines - 1)
+                else:
+                    # TODO! Find where active_spc is
+                    #active_spcs = copy.copy(exp_set['plot']['active_spc'])
+                    #active_spcs.reverse()
+                    #labels = ['Total'] + active_spcs
+                    labels = None
+            else:
+                print(f'Labels not implemented for meas_type {meas_type}')
+                labels = [None] * nlines
+        return labels
+
+    @staticmethod
+    def plotter_outcome__single_line(experiment_set: ExperimentSet, line_idx, current_ax, mech_frmt, labels):
+        # TODO! find way to move into class
+        mech_xdata = experiment_set.condition_range.generate()
+
+        # Load some information
+        xconv = mech_frmt['xconv']
+        yconv = mech_frmt['yconv']
+        color = mech_frmt['color']
+        marker = mech_frmt['marker']
+        order = mech_frmt['order']  # higher numbers go on top
+
+        # TODO! handled wrong do we still need to invert?
+        if xconv == 'inv':  # fix the case of inverse temperature
+            mech_xdata = 1000 / mech_xdata
+            xconv = 1
+
+        # Get ydata for the current line
+        ndims = Plotter.get_num_targs(experiment_set) # TODO! verify that this is correct
+
+        # originally checked if plt_ydata was an array or an array of arrays here
+
+        # Get linestyle based on marker formatting and line_idx
+        if marker == '':  # if plotting a line
+            linestyle = LINESTYLES[line_idx]
+        else:  # if plotting points
+            linestyle = ''
+
+        label = labels[line_idx]
+        line_ydata = [] # TODO! get line data probably look at the surrounding loop
+        current_ax.plot(mech_xdata * xconv, line_ydata, label=label,
+                    color=color, linestyle=linestyle, marker=marker,
+                    zorder=order)
