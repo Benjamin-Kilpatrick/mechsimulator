@@ -10,7 +10,7 @@ from pint import Quantity
 class Reactors:
 
     @staticmethod
-    def st(temp, pressure, mix, gas, targ_spcs, end_time, p_of_t=None):
+    def st(temperature, pressure, mix, gas, target_species, end_time, p_of_t):
 
         raise NotImplementedError
 
