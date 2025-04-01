@@ -35,19 +35,8 @@ class OutcomeSimulator(ReactionSimulator):
                 T_of_t = SimulatorUtils.interpolate(temps, times, experiment_set.get_time_x_data())
                 ydata[exp_ndx] = numpy.append(concentrations, T_of_t[numpy.newaxis, :], axis=0)
 
-            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:  # TODO: Resolve Pressure
-                idt_targets = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGETS)
-                idt_methods = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_METHOD)
-                target_species = experiment_set.get_target_species()
-                ydata[exp_ndx] = np.ndarray((len(idt_targets)))
-                for target_ndx, idt_target in enumerate(idt_targets):
-                    idt_method = idt_methods[target_ndx]
-                    if idt_target == Condition.PRESSURE:
-                        target_profile = pressures
-                    else:
-                        species_ndx = target_species.index(idt_target)
-                        target_profile = concentrations[species_ndx]
-                    ydata[exp_ndx][target_ndx] = SimulatorUtils.calculate_idt(target_profile, times, idt_method)
+            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
+                ydata[exp_ndx] = SimulatorUtils.calculate_idt(experiment_set, times, pressures, concentrations)
 
             elif experiment_set.measurement == Measurement.HALF_LIFE:  # TODO: Currently assumes only one target
                 half_value = concentrations[0][0] / 2
@@ -169,18 +158,7 @@ class OutcomeSimulator(ReactionSimulator):
             )
 
             if experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                idt_targets = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGETS)
-                idt_methods = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_METHOD)
-                target_species = experiment_set.get_target_species()
-                ydata = np.ndarray((len(idt_targets)))
-                for target_ndx, idt_target in enumerate(idt_targets):
-                    idt_method = idt_methods[target_ndx]
-                    if idt_target == Condition.PRESSURE:
-                        target_profile = pressures
-                    else:
-                        species_ndx = target_species.index(idt_target)
-                        target_profile = concentrations[species_ndx]
-                    ydata[target_ndx] = SimulatorUtils.calculate_idt(target_profile, times, idt_method)
+                ydata[exp_ndx] = SimulatorUtils.calculate_idt(experiment_set, times, pressures, concentrations)
             else:
                 raise ValueError(f"Rapid compression reactions not equipped to calculate {experiment_set.measurement}")
 
