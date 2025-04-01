@@ -4,7 +4,11 @@
 '''Avoid:
 1. Dictionaries (unless necessary)
 2. '''
+from typing import List
+
 from pint import Quantity
+
+from data.mixtures.compound import Compound
 
 
 class Reactors:
@@ -65,8 +69,13 @@ class Reactors:
 
         pressure = pressure.to('pascal')
 
-        #TODO: come replace these dict methods once mix is no longer a dict
-        if isinstance(mix, dict) and 'fuel' in mix:  # if mix defined using phi
+        '''species, concentration, and balanced'''
+       """ #TODO: come replace these dict methods once mix is no longer a dict
+        if isinstance(mix, List) and ('fuel' in mix):
+            fuel = ''
+            fuel_count = len(mix['fuel'])"""
+
+        if isinstance(mix, dict) and 'fuel' in mix:  # If there is a mixture defined using phi
             # Create string for fuel species
             fuel = ''
             fuel_count = len(mix['fuel'])
