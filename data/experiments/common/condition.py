@@ -53,3 +53,7 @@ class Condition(Enum):
     """time profile"""
     TIME_PROFILE_SETPOINTS = 22
     """time profile set points"""
+    FUEL = 23
+    """fuel species name for free flame"""
+    OXIDIZERS = 24
+    """list of species oxidizers (both species and ratio)"""

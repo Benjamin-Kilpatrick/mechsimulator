@@ -2,7 +2,7 @@ from data.common.value import Value
 from data.mechanism.species import Species
 
 
-class Compound:
+class Concentration:
     """
     Compound is the concentration information for a species
     """

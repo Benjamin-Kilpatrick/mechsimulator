@@ -9,7 +9,7 @@ from data.experiments.experiment_set import ExperimentSet
 from yaml import dump
 
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
+from data.mixtures.concentration import Concentration
 from serial.common.utils import Utils
 
 
@@ -76,7 +76,7 @@ class ExperimentWriter:
                 }
             )
 
-        compound: Compound
+        compound: Concentration
         for compound in experiment_set.simulated_compounds:
             output_dict['compounds'].append(
                 {

@@ -14,7 +14,7 @@ from data.experiments.metadata import MetaData
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
+from data.mixtures.concentration import Concentration
 
 
 class ExperimentSet:
@@ -23,6 +23,7 @@ class ExperimentSet:
     """
 
     def __init__(self,
+                 name: str,
                  metadata: MetaData,
                  calculation_type: CalculationType,
                  x_source: DataSource,
@@ -31,10 +32,11 @@ class ExperimentSet:
                  reaction: Reaction,
                  measurement: Measurement,
                  simulated_species: List[Species],
-                 simulated_compounds: List[Compound],
+                 simulated_compounds: List[Concentration],
                  measured_experiments: List[Experiment]):
         """
         Constructor
+        :param name: name of the original file object
         :param metadata: The meta data about the experiment
         :param calculation_type: The type of simulation calculation to perform
         :param x_source: Where the x data is sourced, MEASURED for the measured experiments, SIMULATED for the simulation variable of interest
@@ -46,6 +48,8 @@ class ExperimentSet:
         :param simulated_compounds: The chemical mixtures of the starting solution
         :param measured_experiments: All of the real data of real experiments run
         """
+
+        self.name: str = name
         self.metadata: MetaData = metadata
         self.calculation_type: CalculationType = calculation_type
         self.x_source: DataSource = x_source
@@ -57,7 +61,7 @@ class ExperimentSet:
         self.measurement: Measurement = measurement
 
         self.simulated_species: List[Species] = simulated_species
-        self.simulated_compounds: List[Compound] = simulated_compounds
+        self.simulated_compounds: List[Concentration] = simulated_compounds
         self.simulated_experiments: List[Experiment] = []
 
         # TODO implement this operation
@@ -137,3 +141,6 @@ class ExperimentSet:
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species
+
+    def get_name(self) -> str:
+        return self.name

@@ -19,7 +19,7 @@ from data.experiments.metadata import MetaData
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
+from data.mixtures.concentration import Concentration
 from serial.common.env_path import EnvPath
 from serial.common.file_type import FileType
 from serial.common.utils import Utils
@@ -50,12 +50,13 @@ class ExperimentReader:
 
         file_type: FileType = Utils.get_file_type(experiment_file)
         full_filename: str = Utils.get_full_path(EnvPath.EXPERIMENT, experiment_file)
+        name: str = experiment_file.split('.')[0]
 
         # decide which function to use to parse the file
         if file_type == FileType.EXCEL:
-            return ExperimentReader.read_excel_file(full_filename, calculation_type, x_source, condition_source)
+            return ExperimentReader.read_excel_file(name, full_filename, calculation_type, x_source, condition_source)
         if file_type == FileType.YAML:
-            return ExperimentReader.read_yaml_file(full_filename, calculation_type, x_source, condition_source)
+            return ExperimentReader.read_yaml_file(name, full_filename, calculation_type, x_source, condition_source)
 
         raise Exception(f"File {experiment_file} is in an unsupported format, only .xlsl and .yaml files are supported")
 
@@ -122,6 +123,7 @@ class ExperimentReader:
 
     @staticmethod
     def read_excel_file(
+            name: str,
             experiment_file: str,
             calculation_type: CalculationType,
             x_source: DataSource,
@@ -129,6 +131,7 @@ class ExperimentReader:
     ) -> ExperimentSet:
         """
         Parse an experiment Excel sheet
+        :param name: name of the original file object
         :param experiment_file: path to the experiment file
         :param calculation_type: calculation type
         :param x_source: x source of experiment data
@@ -166,8 +169,8 @@ class ExperimentReader:
 
         # species and compounds parsed from experiment sheet
         simulated_species: List[Species] = ExperimentReader.parse_species_excel(info_dict['spc'])
-        simulated_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(info_dict['mix'],
-                                                                                     simulated_species)
+        simulated_compounds: List[Concentration] = ExperimentReader.parse_compounds_excel(info_dict['mix'],
+                                                                                          simulated_species)
 
         measured_experiments: List[Experiment] = []
 
@@ -180,7 +183,7 @@ class ExperimentReader:
 
             # conditions and compounds
             exp_conditions: ConditionSet = ExperimentReader.read_all_variables_excel(exp_dict['conds'])
-            exp_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
+            exp_compounds: List[Concentration] = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
                 result_dict = exp_dict['result'][result_name]
@@ -209,6 +212,7 @@ class ExperimentReader:
             )
 
         return ExperimentSet(
+            name,
             meta_data,
             calculation_type,
             x_source,
@@ -261,7 +265,7 @@ class ExperimentReader:
         return species
 
     @staticmethod
-    def parse_compounds_excel(data: Dict[str, Any], species: List[Species]) -> List[Compound]:
+    def parse_compounds_excel(data: Dict[str, Any], species: List[Species]) -> List[Concentration]:
         """
         Parse compound data
         :param data: dictionary of mixtures from the info sheet
@@ -272,7 +276,7 @@ class ExperimentReader:
         for spc in species:
             species_lookup[spc.name] = spc
 
-        compounds: List[Compound] = []
+        compounds: List[Concentration] = []
         compound_name: str
         for compound_name in data.keys():
             compound_dict: Dict[str, Any] = data[compound_name]
@@ -287,7 +291,7 @@ class ExperimentReader:
                 value = Value(compound_quantity, compound_quantity, compound_quantity)
 
             compounds.append(
-                Compound(
+                Concentration(
                     species_lookup[compound_name],
                     value,
                     compound_quantity == 'bal'

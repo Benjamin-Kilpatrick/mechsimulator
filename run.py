@@ -28,7 +28,7 @@ def main():
 
     idx: int = 0
     for experiment_file in job.experiment_files:
-        ExperimentWriter.write_yaml(f'{file.split(".")[0]}_{experiment_file.metadata.source}_{idx}.yaml',
+        ExperimentWriter.write_yaml(f'{experiment_file.name}.yaml',
                                     experiment_file)
         idx += 1
 

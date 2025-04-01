@@ -61,7 +61,9 @@ class JobReader:
             zip(mechs['mech_filenames'], mechs['spc_filenames'], mechs['mech_names'])
         ]
 
-        return Job(experiment_sets, mechanisms)
+        name: str = job_file.split('.')[0]
+
+        return Job(name, experiment_sets, mechanisms)
 
     @staticmethod
     def read_yaml_file(job_file: str) -> Job:

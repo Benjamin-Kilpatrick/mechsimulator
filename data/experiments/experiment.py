@@ -5,7 +5,7 @@ from pint import Quantity
 from data.experiments.common.condition import Condition
 from data.experiments.common.condition_set import ConditionSet
 from data.experiments.results import Results
-from data.mixtures.compound import Compound
+from data.mixtures.concentration import Concentration
 
 
 class Experiment:
@@ -15,7 +15,7 @@ class Experiment:
 
     def __init__(self,
                  conditions: ConditionSet,
-                 compounds: List[Compound],
+                 compounds: List[Concentration],
                  results: Results):
         """
         Constructor
@@ -24,7 +24,7 @@ class Experiment:
         :param results: Measured results (may be empty for simulated experiments)
         """
         self.conditions: ConditionSet = conditions
-        self.compounds: List[Compound] = compounds
+        self.compounds: List[Concentration] = compounds
         self.results: Results = results
 
     def __repr__(self) -> str:
@@ -33,7 +33,7 @@ class Experiment:
             out += f"\n\t{compound}"
         return out
 
-    def get_compounds(self) -> List[Compound]:
+    def get_compounds(self) -> List[Concentration]:
         """
         Get the list of compound mixtures
         :return: a list of compound mixtures
