@@ -7,6 +7,7 @@ from data.experiments.common.condition import Condition
 from data.experiments.common.idt_method import IDTMethod
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
+from data.experiments.reaction import Reaction
 from data.mechanism.mechanism import Mechanism
 
 
@@ -172,3 +173,10 @@ class SimulatorUtils:
 
         return ydata
 
+    @staticmethod
+    def raise_reaction_measurement_error(reaction: Reaction, measurement: Measurement):
+        raise ValueError(f"{reaction} reactions are not equipped to calculate {measurement}")
+
+    @staticmethod
+    def raise_invalid_pathways_error(reaction: Reaction):
+        raise ValueError(f"{reaction} cannot calculate pathways")

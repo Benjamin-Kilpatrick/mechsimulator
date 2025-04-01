@@ -29,7 +29,10 @@ class OutcomeSimulator(ReactionSimulator):
                 experiment_set.get_target_species(), end_time, p_of_t
             )
 
-            if experiment_set.measurement == Measurement.CONCENTRATION:
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+
+            elif experiment_set.measurement == Measurement.CONCENTRATION:
                 # interpolate raw concentrations to fit uniform times
                 concentrations = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
                 T_of_t = SimulatorUtils.interpolate(temps, times, experiment_set.get_time_x_data())
@@ -75,7 +78,7 @@ class OutcomeSimulator(ReactionSimulator):
                 ydata = SimulatorUtils.interpolate(concentrations, times, numpy.array([end_time]))
                 ydata = ydata[:, -1]
             else:
-                raise ValueError(f'Shock tube reactions are not equipped to calculate {experiment_set.measurement}')
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
             exp_ndx += 1
         return ydata
@@ -104,7 +107,7 @@ class OutcomeSimulator(ReactionSimulator):
             elif experiment_set.measurement == Measurement.OUTLET:
                 ydata[exp_ndx] = concentrations[:, -1]  # Outlet just wants last entry
             else:
-                raise ValueError(f"Plug flow reactor reactions are not equipped for {experiment_set.measurement}")
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
             exp_ndx += 1
         return ydata
 
@@ -138,10 +141,10 @@ class OutcomeSimulator(ReactionSimulator):
 
             if experiment_set.calculation_type == CalculationType.PATHWAY:
                 ydata[exp_ndx] = end_gas.TPX
-            if experiment_set.measurement == Measurement.Outlet:
+            elif experiment_set.measurement == Measurement.Outlet:
                 ydata[exp_ndx] = concentrations
             else:
-                raise NotImplementedError(f"Jet stream reactions are not equipped to handle {experiment_set.measurement}")
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
         return ydata, all_concentrations
 
@@ -157,10 +160,12 @@ class OutcomeSimulator(ReactionSimulator):
                 experiment.conditions.get(Condition.V_OF_T)
             )
 
-            if experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
                 ydata[exp_ndx] = SimulatorUtils.calculate_idt(experiment_set, times, pressures, concentrations)
             else:
-                raise ValueError(f"Rapid compression reactions not equipped to calculate {experiment_set.measurement}")
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
 
     def const_t_p(self, experiment_set: ExperimentSet, mechanism: Mechanism):
@@ -184,7 +189,7 @@ class OutcomeSimulator(ReactionSimulator):
             elif experiment_set.measurement == Measurement.OUTLET:
                 ydata = SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
             else:
-                raise ValueError(f'Constant temperature/pressure reactions are not equipped to calculate {experiment_set.measurement}')
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
 
     def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions: List = None):
@@ -206,10 +211,12 @@ class OutcomeSimulator(ReactionSimulator):
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position
             new_solution_list.append(new_solution)
 
-            if experiment_set.measurement == Measurement.LFS:
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+            elif experiment_set.measurement == Measurement.LFS:
                 ydata[exp_ndx] = velocities[0] * 100
             else:
-                raise ValueError(f'Free flame reactions are not equipped to calculate {experiment_set.measurement}')
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
         return ydata, new_solution_list
 
