@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import List, Any
 
 import numpy as np
@@ -90,6 +91,22 @@ MEASUREMENT_DISPLAY_NAMES = {
     Measurement.HALF_LIFE:           'Half-life',
 }
 
+class PlotLine(ABC):
+    @abstractmethod
+    def get_ydata(self):
+        pass
+
+    @abstractmethod
+    def get_xdata(self):
+        pass
+
+    def plot(self):
+        current_ax.plot(mech_xdata * xconv, line_ydata, label=label,
+                        color=color, linestyle=linestyle, marker=marker,
+                        zorder=order)
+
+
+
 class Plotter:
 
     @staticmethod
@@ -166,7 +183,6 @@ class Plotter:
         # exp_xdata = exp_set['overall']['exp_xdata']
         # mech_frmt = _mech_frmt(exp_set, set_frmt, conds_src)
         # figs_axes = single_mech(exp_ydata, exp_xdata, figs_axes, mech_frmt, exp_set)
-
 
     @staticmethod
     def plotter_outcome__build_figs_axes(job: Job, experiment_set: ExperimentSet, set_frmt):
@@ -359,6 +375,8 @@ class Plotter:
 
     @staticmethod
     def plotter_outcome___pgs_per_grp(plts_per_grp, plts_per_pg):
+        """ Calculates the number of pages per group
+        """
         if plts_per_grp % plts_per_pg == 0:  # if perfectly divisible, just divide
             pgs_per_grp = int(plts_per_grp / plts_per_pg)
         else:  # otherwise, add one (since int rounds down)
@@ -558,18 +576,6 @@ class Plotter:
             num_targs = len(experiment.results.target_results)
 
         return num_targs
-
-    @staticmethod
-    def plotter_outcome___pgs_per_grp(plts_per_grp, plts_per_pg):
-        """ Calculates the number of pages per group
-        """
-
-        if plts_per_grp % plts_per_pg == 0:  # if perfectly divisible, just divide
-            pgs_per_grp = int(plts_per_grp / plts_per_pg)
-        else:  # otherwise, add one (since int rounds down)
-            pgs_per_grp = int(plts_per_grp / plts_per_pg) + 1
-
-        return pgs_per_grp
 
     @staticmethod
     def plotter_outcome__single_plot(experiment_set: ExperimentSet, mech_frmt: dict, mech: Mechanism, plt_idx_pg, current_ax):
