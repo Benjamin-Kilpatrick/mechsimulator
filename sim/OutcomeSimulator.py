@@ -187,9 +187,12 @@ class OutcomeSimulator(ReactionSimulator):
             elif experiment_set.measurement == Measurement.CONCENTRATION:
                 ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
             elif experiment_set.measurement == Measurement.OUTLET:
-                ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
+                ydata[exp_ndx] = SimulatorUtils.interpolate(
+                    concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+        return ydata
 
 
     def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions: List = None):
