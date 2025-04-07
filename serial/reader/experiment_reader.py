@@ -1,4 +1,6 @@
 import math
+import mmap
+import types
 from typing import Dict, Any, List, Tuple
 
 import numpy
@@ -24,6 +26,13 @@ from serial.common.env_path import EnvPath
 from serial.common.file_type import FileType
 from serial.common.utils import Utils
 from serial.reader.unit_parser import UnitParser
+
+class MyMMap(mmap.mmap):
+    def __init__(self, *args, **kwargs) -> None:
+        mmap.mmap.__init__(*args, **kwargs)
+
+    def seekable(self):
+        return True
 
 
 class ExperimentReader:
@@ -135,7 +144,9 @@ class ExperimentReader:
         :param condition_source: condition source of experiment data
         :return: an experiment set parsed from experiment_file
         """
-        excel = pandas.ExcelFile(experiment_file, engine='openpyxl')
+        with open(experiment_file, "r+b") as f:
+            mm = MyMMap(f.fileno(), 0)
+            excel = pandas.ExcelFile(mm, engine='openpyxl')
         info: DataFrame = excel.parse('info')
         experiment_sheets: List[str] = list(filter(lambda x: x != 'info', excel.sheet_names))
 
