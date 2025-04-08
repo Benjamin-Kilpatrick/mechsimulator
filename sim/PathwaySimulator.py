@@ -7,11 +7,11 @@ from sim.ReactionSimulator import ReactionSimulator
 
 class PathwaySimulator(ReactionSimulator):
     @staticmethod
-    def simulate_experiment_set(experiment: ExperimentSet, mechanisms: List[Mechanism]):
+    def simulate_experiment_set(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
         raise NotImplementedError
 
     @staticmethod
-    def rcm(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def rapid_compression_machine(experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
     @staticmethod
@@ -35,7 +35,7 @@ class PathwaySimulator(ReactionSimulator):
         raise NotImplementedError
 
     @staticmethod
-    def jsr(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def jet_stream_reactor(experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
     @staticmethod
@@ -43,7 +43,7 @@ class PathwaySimulator(ReactionSimulator):
         raise NotImplementedError
 
     @staticmethod
-    def st(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def shock_tube(experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
     @staticmethod
@@ -51,7 +51,7 @@ class PathwaySimulator(ReactionSimulator):
         raise NotImplementedError
 
     @staticmethod
-    def pfr(experiment_set: ExperimentSet, mechanism: Mechanism):
+    def plug_flow_reactor(experiment_set: ExperimentSet, mechanism: Mechanism):
         raise NotImplementedError
 
     @staticmethod

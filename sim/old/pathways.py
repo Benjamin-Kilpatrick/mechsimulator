@@ -1,4 +1,4 @@
-from sim import outcome
+from sim.old import outcome
 
 
 def single_mech(conds_dct, gas, reac_type, ydata_shape):

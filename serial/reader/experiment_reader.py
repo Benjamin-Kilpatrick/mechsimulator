@@ -10,8 +10,8 @@ from data.common.value import Value
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
 from data.experiments.common.phi import Phi
-from data.experiments.common.variable_range import VariableRange
-from data.experiments.common.variable_set import Variable, VariableSet
+from data.experiments.common.condition_range import ConditionRange
+from data.experiments.common.condition_set import Condition, ConditionSet
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
@@ -160,9 +160,9 @@ class ExperimentReader:
         # reaction, measurement and variable of interest data structures
         reaction: Reaction = Utils.parse_reaction_type(overall['reac_type']['value'])
         measurement: Measurement = Utils.parse_measurement_type(overall['meas_type']['value'])
-        variable: Variable = Utils.convert_excel_str_variable(plot_data['variable']['value'])
-        variable_set: VariableSet = ExperimentReader.parse_variables_excel(reaction, measurement, variable, plot_data)
-        variable_range: VariableRange = VariableRange(variable, start, end, inc, variable_set)
+        variable: Condition = Utils.convert_excel_str_variable(plot_data['variable']['value'])
+        variable_set: ConditionSet = ExperimentReader.parse_variables_excel(reaction, measurement, variable, plot_data)
+        variable_range: ConditionRange = ConditionRange(variable, start, end, inc, variable_set)
 
         # species and compounds parsed from experiment sheet
         simulated_species: List[Species] = ExperimentReader.parse_species_excel(info_dict['spc'])
@@ -179,7 +179,7 @@ class ExperimentReader:
             exp_dict = ExperimentReader.convert_excel_sheet_to_dict(exp_sheet, exp_dict)
 
             # conditions and compounds
-            exp_conditions: VariableSet = ExperimentReader.read_all_variables_excel(exp_dict['conds'])
+            exp_conditions: ConditionSet = ExperimentReader.read_all_variables_excel(exp_dict['conds'])
             exp_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
@@ -194,7 +194,7 @@ class ExperimentReader:
                 value: Quantity = UnitParser.parse_all(raw_value, result_dict['units'])
                 try:
                     # test to see if it is a variable
-                    variable: Variable = Utils.convert_excel_str_variable(result_name)
+                    variable: Condition = Utils.convert_excel_str_variable(result_name)
                     results.set_variable(variable, value)
                 except KeyError:
                     # it is a target (str name only)
@@ -297,7 +297,7 @@ class ExperimentReader:
         return compounds
 
     @staticmethod
-    def get_variable_excel(variable: Variable, data: Dict[str, Any], require: bool) -> Tuple[Any, float]:
+    def get_variable_excel(variable: Condition, data: Dict[str, Any], require: bool) -> Tuple[Any, float]:
         """
         Get a variable from the excel data, correctly parse if it is scalar or array type, and throw an exception
         if the variable is required and not found
@@ -311,32 +311,32 @@ class ExperimentReader:
         if variable_name in data:
             var_data: Dict = data[variable_name]
 
-            if variable == Variable.TIME_STEP or \
-                    variable == Variable.END_TIME or \
-                    variable == Variable.WAVELENGTH or \
-                    variable == Variable.ACTIVE_SPECIES or \
-                    variable == Variable.ABS_COEFFICIENT or \
-                    variable == Variable.PATH_LENGTH or \
-                    variable == Variable.IGNITION_DELAY_TARGETS or \
-                    variable == Variable.IGNITION_DELAY_METHOD or \
-                    variable == Variable.TARGET_SPECIES or \
-                    variable == Variable.TEMPERATURE or \
-                    variable == Variable.PRESSURE or \
-                    variable == Variable.LENGTH or \
-                    variable == Variable.RES_TIME or \
-                    variable == Variable.MDOT or \
-                    variable == Variable.AREA:
+            if variable == Condition.TIME_STEP or \
+                    variable == Condition.END_TIME or \
+                    variable == Condition.WAVELENGTH or \
+                    variable == Condition.ACTIVE_SPECIES or \
+                    variable == Condition.ABS_COEFFICIENT or \
+                    variable == Condition.PATH_LENGTH or \
+                    variable == Condition.IGNITION_DELAY_TARGETS or \
+                    variable == Condition.IGNITION_DELAY_METHOD or \
+                    variable == Condition.TARGET_SPECIES or \
+                    variable == Condition.TEMPERATURE or \
+                    variable == Condition.PRESSURE or \
+                    variable == Condition.LENGTH or \
+                    variable == Condition.RES_TIME or \
+                    variable == Condition.MDOT or \
+                    variable == Condition.AREA:
                 return var_data['value'], var_data['units']
-            elif variable == Variable.PHI:
+            elif variable == Condition.PHI:
                 # TODO implement parsing phi
                 raise NotImplementedError()
-            elif variable == Variable.DPDT or \
-                    variable == Variable.TIME or \
-                    variable == Variable.V_OF_T or \
-                    variable == Variable.X_PROFILE or \
-                    variable == Variable.TIME_PROFILE_SETPOINTS:
+            elif variable == Condition.DPDT or \
+                    variable == Condition.TIME or \
+                    variable == Condition.V_OF_T or \
+                    variable == Condition.X_PROFILE or \
+                    variable == Condition.TIME_PROFILE_SETPOINTS:
                 return numpy.asarray([float(i) for i in var_data['other']]), var_data['units']
-            elif variable == Variable.TIME_PROFILE:
+            elif variable == Condition.TIME_PROFILE:
                 return numpy.asarray([float(i) for i in var_data[0]['other']]), var_data[0]['units']
 
         elif require:
@@ -345,16 +345,16 @@ class ExperimentReader:
         return None, None
 
     @staticmethod
-    def read_all_variables_excel(data: Dict[str, Dict[str, Any]]) -> VariableSet:
+    def read_all_variables_excel(data: Dict[str, Dict[str, Any]]) -> ConditionSet:
         """
         Read all variables in the experiment data sheet dictionary
         :param data: Dictionary of experiment data from an Excel file
         :return: a set of all variable conditions
         """
-        variable_set: VariableSet = VariableSet()
+        variable_set: ConditionSet = ConditionSet()
 
-        variable: Variable
-        for variable in Variable:
+        variable: Condition
+        for variable in Condition:
             if Utils.convert_variable_excel_str(variable) in data:
                 value: Any = UnitParser.parse_all(*ExperimentReader.get_variable_excel(variable, data, False))
                 variable_set.set(variable, value)
@@ -365,8 +365,8 @@ class ExperimentReader:
     def parse_variables_excel(
             reaction: Reaction,
             measurement: Measurement,
-            variable: Variable,
-            data: Dict[str, Any]) -> VariableSet:
+            variable: Condition,
+            data: Dict[str, Any]) -> ConditionSet:
         """
         Parse experiment conditions based on the reaction type and measurement type
         :param reaction: reaction type
@@ -376,180 +376,180 @@ class ExperimentReader:
         :return: a set of all variable conditions, both required and optional variables
         """
 
-        variable_set: VariableSet = VariableSet()
+        variable_set: ConditionSet = ConditionSet()
 
-        if variable != Variable.TEMPERATURE:
+        if variable != Condition.TEMPERATURE:
             temperature: float = UnitParser.parse(
                 'temperature',
-                *ExperimentReader.get_variable_excel(Variable.TEMPERATURE, data, True)
+                *ExperimentReader.get_variable_excel(Condition.TEMPERATURE, data, True)
             )
-            variable_set.set(Variable.TEMPERATURE, temperature)
-        elif variable != Variable.PRESSURE:
+            variable_set.set(Condition.TEMPERATURE, temperature)
+        elif variable != Condition.PRESSURE:
             pressure: float = UnitParser.parse(
                 'pressure',
-                *ExperimentReader.get_variable_excel(Variable.PRESSURE, data, True)
+                *ExperimentReader.get_variable_excel(Condition.PRESSURE, data, True)
             )
-            variable_set.set(Variable.PRESSURE, pressure)
+            variable_set.set(Condition.PRESSURE, pressure)
 
         if reaction == Reaction.SHOCKTUBE:
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
             dpdt: numpy.ndarray = UnitParser.parse(
                 'dP/dt',
-                *ExperimentReader.get_variable_excel(Variable.DPDT, data, False)
+                *ExperimentReader.get_variable_excel(Condition.DPDT, data, False)
             )
 
-            variable_set.set(Variable.END_TIME, end_time)
-            variable_set.set(Variable.DPDT, dpdt)
+            variable_set.set(Condition.END_TIME, end_time)
+            variable_set.set(Condition.DPDT, dpdt)
         elif reaction == Reaction.PLUG_FLOW_REACTOR:
             length: float = UnitParser.parse(
                 'length',
-                *ExperimentReader.get_variable_excel(Variable.LENGTH, data, True)
+                *ExperimentReader.get_variable_excel(Condition.LENGTH, data, True)
             )
             res_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.RES_TIME, data, False)
+                *ExperimentReader.get_variable_excel(Condition.RES_TIME, data, False)
             )
             mdot: float = UnitParser.parse(
                 'mdot',
-                *ExperimentReader.get_variable_excel(Variable.MDOT, data, False)
+                *ExperimentReader.get_variable_excel(Condition.MDOT, data, False)
             )
             if res_time is None and mdot is None:
                 raise RuntimeError('Either mdot or res time are required for plug flow reactor')
             area: float = UnitParser.parse(
                 'area',
-                *ExperimentReader.get_variable_excel(Variable.AREA, data, True)
+                *ExperimentReader.get_variable_excel(Condition.AREA, data, True)
             )
             # TODO
             x_profile: numpy.ndarray = UnitParser.parse_all(
-                *ExperimentReader.get_variable_excel(Variable.X_PROFILE, data, False)
+                *ExperimentReader.get_variable_excel(Condition.X_PROFILE, data, False)
             )
             t_profile: numpy.ndarray = UnitParser.parse_all(
-                *ExperimentReader.get_variable_excel(Variable.TIME_PROFILE, data, False)
+                *ExperimentReader.get_variable_excel(Condition.TIME_PROFILE, data, False)
             )
             t_profile_setpoints: numpy.ndarray = UnitParser.parse_all(
-                *ExperimentReader.get_variable_excel(Variable.TIME_PROFILE_SETPOINTS, data, False)
+                *ExperimentReader.get_variable_excel(Condition.TIME_PROFILE_SETPOINTS, data, False)
             )
 
-            variable_set.set(Variable.LENGTH, length)
-            variable_set.set(Variable.RES_TIME, res_time)
-            variable_set.set(Variable.MDOT, mdot)
-            variable_set.set(Variable.AREA, area)
-            variable_set.set(Variable.X_PROFILE, x_profile)
-            variable_set.set(Variable.TIME_PROFILE, t_profile)
-            variable_set.set(Variable.TIME_PROFILE_SETPOINTS, t_profile_setpoints)
+            variable_set.set(Condition.LENGTH, length)
+            variable_set.set(Condition.RES_TIME, res_time)
+            variable_set.set(Condition.MDOT, mdot)
+            variable_set.set(Condition.AREA, area)
+            variable_set.set(Condition.X_PROFILE, x_profile)
+            variable_set.set(Condition.TIME_PROFILE, t_profile)
+            variable_set.set(Condition.TIME_PROFILE_SETPOINTS, t_profile_setpoints)
         elif reaction == Reaction.JET_STREAM_REACTOR:
             volume: float = UnitParser.parse(
                 'volume',
-                *ExperimentReader.get_variable_excel(Variable.VOLUME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.VOLUME, data, True)
             )
             res_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.RES_TIME, data, False)
+                *ExperimentReader.get_variable_excel(Condition.RES_TIME, data, False)
             )
             mdot: float = UnitParser.parse(
                 'mdot',
-                *ExperimentReader.get_variable_excel(Variable.MDOT, data, False)
+                *ExperimentReader.get_variable_excel(Condition.MDOT, data, False)
             )
             if res_time is None and mdot is None:
                 raise RuntimeError('Either mdot or res time are required for plug flow reactor')
 
-            variable_set.set(Variable.VOLUME, volume)
-            variable_set.set(Variable.RES_TIME, res_time)
-            variable_set.set(Variable.MDOT, mdot)
+            variable_set.set(Condition.VOLUME, volume)
+            variable_set.set(Condition.RES_TIME, res_time)
+            variable_set.set(Condition.MDOT, mdot)
         elif reaction == Reaction.RAPID_COMPRESSION_MACHINE:
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
             time: numpy.ndarray = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.TIME, data, False)
+                *ExperimentReader.get_variable_excel(Condition.TIME, data, False)
             )
             v_of_t: numpy.ndarray = UnitParser.parse(
                 'velocity',
-                *ExperimentReader.get_variable_excel(Variable.V_OF_T, data, False)
+                *ExperimentReader.get_variable_excel(Condition.V_OF_T, data, False)
             )
 
-            variable_set.set(Variable.END_TIME, end_time)
-            variable_set.set(Variable.TIME, time)
-            variable_set.set(Variable.V_OF_T, v_of_t)
+            variable_set.set(Condition.END_TIME, end_time)
+            variable_set.set(Condition.TIME, time)
+            variable_set.set(Condition.V_OF_T, v_of_t)
         elif reaction == Reaction.CONST_T_P:
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Variable.END_TIME, end_time)
+            variable_set.set(Condition.END_TIME, end_time)
         elif reaction == Reaction.FREE_FLAME:
-            if variable != Variable.PHI:
+            if variable != Condition.PHI:
                 phi: Phi = UnitParser.parse(
                     'phi',
-                    *ExperimentReader.get_variable_excel(Variable.PHI, data, False)
+                    *ExperimentReader.get_variable_excel(Condition.PHI, data, False)
                 )
-                variable_set.set(Variable.PHI, phi)
+                variable_set.set(Condition.PHI, phi)
         else:
             raise NotImplementedError(f"Reaction {reaction.name} is not implemented")
 
         if measurement == Measurement.ABSORPTION or measurement == Measurement.EMISSION:
             time_step: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.TIME_STEP, data, True)
+                *ExperimentReader.get_variable_excel(Condition.TIME_STEP, data, True)
             )
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
             wavelength: float = UnitParser.parse(
                 'length',
-                *ExperimentReader.get_variable_excel(Variable.WAVELENGTH, data, True)
+                *ExperimentReader.get_variable_excel(Condition.WAVELENGTH, data, True)
             )
-            active_species: List[str] = ExperimentReader.get_variable_excel(Variable.ACTIVE_SPECIES, data, True)[0]
+            active_species: List[str] = ExperimentReader.get_variable_excel(Condition.ACTIVE_SPECIES, data, True)[0]
 
-            variable_set.set(Variable.TIME_STEP, time_step)
-            variable_set.set(Variable.END_TIME, end_time)
-            variable_set.set(Variable.WAVELENGTH, wavelength)
-            variable_set.set(Variable.ACTIVE_SPECIES, active_species)
+            variable_set.set(Condition.TIME_STEP, time_step)
+            variable_set.set(Condition.END_TIME, end_time)
+            variable_set.set(Condition.WAVELENGTH, wavelength)
+            variable_set.set(Condition.ACTIVE_SPECIES, active_species)
         elif measurement == Measurement.IGNITION_DELAY_TIME:
             ignition_delay_targets: List[str] = \
-            ExperimentReader.get_variable_excel(Variable.IGNITION_DELAY_TARGETS, data, True)[0]
+            ExperimentReader.get_variable_excel(Condition.IGNITION_DELAY_TARGETS, data, True)[0]
             ignition_delay_method: str = \
-            ExperimentReader.get_variable_excel(Variable.IGNITION_DELAY_METHOD, data, True)[0]
+            ExperimentReader.get_variable_excel(Condition.IGNITION_DELAY_METHOD, data, True)[0]
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Variable.IGNITION_DELAY_TARGETS, ignition_delay_targets)
-            variable_set.set(Variable.IGNITION_DELAY_METHOD, ignition_delay_method)
-            variable_set.set(Variable.END_TIME, end_time)
+            variable_set.set(Condition.IGNITION_DELAY_TARGETS, ignition_delay_targets)
+            variable_set.set(Condition.IGNITION_DELAY_METHOD, ignition_delay_method)
+            variable_set.set(Condition.END_TIME, end_time)
         elif measurement == Measurement.OUTLET:
             pass
         elif measurement == Measurement.ION or measurement == Measurement.PRESSURE or measurement == Measurement.CONCENTRATION:
             time_step: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.TIME_STEP, data, True)
+                *ExperimentReader.get_variable_excel(Condition.TIME_STEP, data, True)
             )
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Variable.TIME_STEP, time_step)
-            variable_set.set(Variable.END_TIME, end_time)
+            variable_set.set(Condition.TIME_STEP, time_step)
+            variable_set.set(Condition.END_TIME, end_time)
         elif measurement == Measurement.LFS:
             pass
         elif measurement == Measurement.HALF_LIFE:
-            target_species: str = ExperimentReader.get_variable_excel(Variable.TARGET_SPECIES, data, True)
+            target_species: str = ExperimentReader.get_variable_excel(Condition.TARGET_SPECIES, data, True)
             end_time: float = UnitParser.parse(
                 'time',
-                *ExperimentReader.get_variable_excel(Variable.END_TIME, data, True)
+                *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Variable.TARGET_SPECIES, target_species)
-            variable_set.set(Variable.END_TIME, end_time)
+            variable_set.set(Condition.TARGET_SPECIES, target_species)
+            variable_set.set(Condition.END_TIME, end_time)
         else:
             raise NotImplementedError(f"Measurement {measurement.name} is not implemented")
 
