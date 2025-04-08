@@ -4,7 +4,7 @@ from typing import List, Any
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter as Formatter
-from rdkit.Contrib.LEF.AddLabels import labels
+#from rdkit.Contrib.LEF.AddLabels import labels
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
@@ -91,7 +91,36 @@ MEASUREMENT_DISPLAY_NAMES = {
     Measurement.HALF_LIFE:           'Half-life',
 }
 
-class PlotLine(ABC):
+
+class PlotterFormat:
+    def __init__(self):
+        self.plot_points:bool = True
+        self.xunit = None
+        self.yunit = None
+        self.ylimit = None
+        self.omit_targs = None
+        self.exp_on_top = True
+        self.rows = 4
+        self.cols = 3
+        self.marker_size = 15
+        self.group_by = 'cond'
+        self.exp_color = 'black'
+        self.xscale = 'linear'
+        self.yscale = 'linear'
+
+class PlotterFigure:
+    def __init__(self):
+        self.fig = plt.figure(figsize=(8.5, 11))
+        self.lines:List[PlotterLine] = []
+
+class Plot:
+    def __init__(self):
+        self.format = PlotterFormat()
+        self.figures: List[PlotterFigure] = []
+
+
+
+class PlotterLine(ABC):
     @abstractmethod
     def get_ydata(self):
         pass
@@ -100,10 +129,39 @@ class PlotLine(ABC):
     def get_xdata(self):
         pass
 
+    @abstractmethod
+    def get_label(self):
+        pass
+
+    @abstractmethod
+    def get_color(self):
+        pass
+
+    @abstractmethod
+    def get_linestyle(self):
+        pass
+
+    @abstractmethod
+    def get_marker(self):
+        pass
+
+    @abstractmethod
+    def get_zorder(self):
+        pass
+
+    @abstractmethod
+    def get_ax(self):
+        pass
+
     def plot(self):
-        current_ax.plot(mech_xdata * xconv, line_ydata, label=label,
-                        color=color, linestyle=linestyle, marker=marker,
-                        zorder=order)
+        mech_xdata = self.get_xdata()
+        line_ydata = self.get_ydata()
+        label = self.get_label()
+        color = self.get_color()
+        linestyle = self.get_linestyle()
+        marker = self.get_marker()
+        zorder = self.get_zorder()
+        self.get_ax().plot(mech_xdata, line_ydata, label=label, color=color, linestyle=linestyle, marker=marker, zorder=zorder)
 
 
 
@@ -193,7 +251,7 @@ class Plotter:
 
         mech_names = Plotter.plotter_util___mech_names(job, experiment_set)
 
-        cond_titles, xlabel, _ = Plotter.plotter_util__get_cond_titles(job, experiment_set, xunit=xunit)
+        cond_titles, xlabel, _ = Plotter.plotter_util__get_cond_titles(experiment_set, xunit=xunit)
 
         targ_titles, ylabel, _ = Plotter.plotter_util__get_targ_titles(experiment_set, yunit=yunit)
 
@@ -205,7 +263,7 @@ class Plotter:
             grp_titles = targ_titles
             plt_titles = cond_titles
 
-        return Plotter.plotter_outcome__build_figs_axes__create_figs(grp_titles, plt_titles, xlabel, ylabel, mech_names, set_frmt)
+        return Plotter.plotter_outcome__build_figs_axes__create_figs(experiment_set, grp_titles, plt_titles, xlabel, ylabel, mech_names, set_frmt)
 
     @staticmethod
     def plotter_util___mech_names(job: Job, experiment_set: ExperimentSet):
@@ -215,7 +273,7 @@ class Plotter:
         return mech_names
 
     @staticmethod
-    def plotter_util__get_cond_titles(job: Job, experiment_set: ExperimentSet, xunit=None):
+    def plotter_util__get_cond_titles(experiment_set: ExperimentSet, xunit=None) -> (List[str], str, Variable):
         meas_type = experiment_set.measurement
         plot_var = experiment_set.condition_range.variable
         units = VARIABLE_UNITS[plot_var][0]  # default unit used for plot_var
@@ -335,6 +393,7 @@ class Plotter:
 
         return targ_titles, ylabel, yquant
 
+# WORK HERE
     @staticmethod
     def plotter_outcome__build_figs_axes__create_figs(experiment_set: ExperimentSet, grp_titles, plt_titles, xlabel, ylabel, mech_names, set_frmt):
         nrows, ncols = set_frmt['rows_cols']
@@ -371,7 +430,7 @@ class Plotter:
                 Plotter.plotter_outcome__add_footers(xlabel, ylabel)
                 figs_axes.append([fig, axes])
 
-        return None
+        return figs_axes
 
     @staticmethod
     def plotter_outcome___pgs_per_grp(plts_per_grp, plts_per_pg):
@@ -436,7 +495,7 @@ class Plotter:
         # Get the conversion factors
         xunit = set_frmt['xunit']
         yunit = set_frmt['yunit']
-        _, _, xquant = Plotter.plotter_util__get_cond_titles(job, experiment_set)
+        _, _, xquant = Plotter.plotter_util__get_cond_titles(experiment_set)
         _, _, yquant = Plotter.plotter_util__get_targ_titles(experiment_set)
         mech_frmt['xconv'] = Plotter.plotter_outcome___mech_frmt__get_conv_factors(xunit, xquant)
         mech_frmt['yconv'] = Plotter.plotter_outcome___mech_frmt__get_conv_factors(yunit, yquant)
