@@ -145,7 +145,7 @@ class ExperimentSet:
     def get_x_data(self) -> pint.Quantity:
         if self.has(Condition.END_TIME):
             return self.get_time_x_data()
-        return self.get_x_data()
+        return self.get_condition_x_data()
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species

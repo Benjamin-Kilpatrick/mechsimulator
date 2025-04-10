@@ -175,39 +175,54 @@ class MeasuredConditionLine(PlotterLine):
         return None
 
     def get_xdata(self):
-        if self.experiment_set.has(Condition.TIME):
-            return self.experiment_set.get_time_x_data()
-        else:
-            return self.experiment_set.get_condition_x_data()
+        return self.experiment_set.get_x_data()
 
     def get_ydata(self) -> np.ndarray:
-        data = [experiment.get(self.condition) for experiment in self.experiment_set.measured_experiments]
+        data = [experiment.get(self.condition).magnitude for experiment in self.experiment_set.measured_experiments]
         return np.asarray(data)
 
-class PlotterFigure: # Called plot in o.g.
-    def __init__(self, lines:List[PlotterLine]):
-        self.fig = plt.figure(figsize=(8.5, 11))
-        self.lines:List[PlotterLine] = lines
+
+class PlotterSubplot:
+    def __init__(self, ax, lines: List[PlotterLine]):
+        self.ax = ax
+        self.lines: List[PlotterLine] = lines
 
     def plot(self):
         for line in self.lines:
-            line.plot(self.fig)
+            line.plot(self.ax)
 
     @staticmethod
-    def load_from_experiment_set(experiment_set:ExperimentSet):
+    def load_from_experiment_set(experiment_set: ExperimentSet, fig):
         lines = []
         if len(experiment_set.measured_experiments) > 0:
             conditions = experiment_set.measured_experiments[0].conditions
             for condition in conditions.get_conditions():
+
                 lines.append(MeasuredConditionLine(condition, experiment_set))
-        return PlotterFigure(lines)
+        axis = fig.add_subplot(1, 1, 0 + 1)
+        return PlotterSubplot(axis, lines)
+
+class PlotterFigure: # Called plot in o.g.
+    def __init__(self, experiment_set: ExperimentSet):
+        self.fig = plt.figure(figsize=(8.5, 11))
+        self.subplots = []
+
+        # do this for every subplot
+        self.subplots.append(PlotterSubplot.load_from_experiment_set(experiment_set, self.fig))
+
+    def plot(self):
+        for subplot in self.subplots:
+            subplot.plot()
+
+
+
 
 class Plot:
     def __init__(self, job: Job):
         self.format = PlotterFormat()
         self.figures: List[PlotterFigure] = []
         for experiment_set in job.experiment_files:
-            self.figures.append(PlotterFigure.load_from_experiment_set(experiment_set))
+            self.figures.append(PlotterFigure(experiment_set))
 
     def plot(self):
         for figure in self.figures:
