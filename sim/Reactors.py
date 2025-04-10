@@ -2,49 +2,148 @@ import cantera
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 import cantera as Cantera
+from typing import List
+from pint import Quantity
+from data.mixtures.compound import Compound
 
 # used ---- to split functions for my own view for now, so i know where functions are that were inside of other functions
-'''Avoid:
-1. Dictionaries (unless necessary)
-2. '''
-from typing import List
 
-from pint import Quantity
-
-from data.mixtures.compound import Compound
 
 
 class Reactors:
 
     @staticmethod
-    def st(temperature, pressure, mix, gas, target_species, end_time, p_of_t):
+    def st(temperature, pressure, mix, gas, targ_species, end_time, pres_vs_time=None):
+        """
+        Will run a shock tube simulation. The non-ideal pressure rise, dP/dt, and can be incorporated via an optional P(t) profile
+        
+        :param temperature: 
+        :param pressure: 
+        :param mix: 
+        :param gas: 
+        :param targ_species: 
+        :param end_time: 
+        :param pres_vs_time: 
+        :return: 
+        """
+        gas = Reactors.set_state(gas, temperature, pressure, mix)
 
-        raise NotImplementedError
+        if pres_vs_time is None:
+            # Create an array of ones spanning from t=0 to t=end_time
+            velocity_vs_time = np.array([[0, end_time], [1, 1]])
+        else:
+            # Convert P(t) to V(t) assuming isentropic behavior
+            gamma = gas.cp_mass / gas.cv_mass  # specific heat ratio
+            velocity_vs_time = np.zeros_like(pres_vs_time)
+            velocity_vs_time[0, :] = pres_vs_time[0, :]  # time values are the same
+            velocity_vs_time[1, :] = (pres_vs_time[1, :] / pres_vs_time[1, 0]) ** (-1 / gamma)
+    
+        reaction = Cantera.IdealGasReactor(gas)
+        reaction.volume = 1 # m^3 (default value, but here for clarity)
+        env = Cantera.Reservoir(gas)
+        wall = Cantera.Wall(env, reaction)
+        wall.area = 1  # m^2 (default value, but here for clarity)
+        wall.heat_transfer_coeff = 0  # no heat transfer considerations for ST
+        def wall_velocity(temp_time):
+            """ Gets the wall velocity at some time based on velocity_vs_time
 
-    @staticmethod
-    def _wall_velocity(time):
-        raise NotImplementedError
+                :param temp_time: individual time value (s)
+                :type temp_time: float
+                :return vel: velocity of the wall (m/s)
+                :rtype: float
+            """
+            dvdt = np.gradient(velocity_vs_time[1, :], velocity_vs_time[0, :])
+            dxdt = dvdt / wall.area  # only for clarity (since A = 1 m^2)
+            vel = np.interp(temp_time, velocity_vs_time[0, :], -1 * dxdt)
+
+            return vel
+        wall.set_velocity(wall_velocity)
+        network = Cantera.ReactorNet([reaction])
+
+        # Run the simulation
+        time = 0
+        states = Cantera.SolutionArray(gas, extra=['t'])
+        states.append(reaction.thermo.state, t=time)
+        while time < np.min([end_time, velocity_vs_time[0, -1]]):
+            time = network.step()
+            states.append(reaction.thermo.state, t=time)
+
+        # Get results
+        times = states.t
+        pressures = states.P
+        temps = states.T
+        targ_concs = np.zeros((len(targ_species), len(times)))
+        for ndx, targ_spc in enumerate(targ_species):
+            if targ_spc is not None:
+                targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
+            else:
+                targ_concs[ndx, :] = np.nan
+
+        rop = None  # will develop later...
+        end_gas = gas
+
+        # todo-t: change to Object return
+        return targ_concs, pressures, temps, times, rop, end_gas
 
     # ---------------
 
     @staticmethod
-    def rcm():
-        raise NotImplementedError
+    def rcm(temp, pressure, mix: Compound, gas, targ_spcs, end_time, velocity_vs_time):
+        gas = Reactors.set_state(gas, temp, pressure, mix)
 
-    @staticmethod
-    def _piston_velocity(time):
-        raise NotImplementedError
+        print('inside reactions, rcm temp: ', temp)
+        # Normalize the volume profile by the first value
+        velocity_vs_time[1, :] = velocity_vs_time[1, :] / velocity_vs_time[1, 0]
+
+        # Set up reactor, piston, and network
+        reaction = Cantera.IdealGasReactor(gas)
+        reaction.volume = 1  # m^3
+        env = Cantera.Reservoir(gas)
+        piston = Cantera.Wall(env, reaction)
+        piston.area = 1  # m^2 (this is the default, but put here for clarity)
+        piston.heat_transfer_coeff = 0  # instead, considering heat trans. w/volume
+
+        @staticmethod
+        def piston_velocity(temp_time):
+            dvdt = np.gradient(velocity_vs_time[1, :], velocity_vs_time[0, :])
+            dxdt = dvdt / piston.area  # only for clarity (since area = 1 m^2)
+            vel = np.interp(temp_time, velocity_vs_time[0, :], -1 * dxdt)
+            return vel
+        
+        piston.set_velocity(piston_velocity)
+        network = Cantera.ReactorNet([reaction])
+        # network.set_max_time_step(np.max(np.diff(velocity_vs_time[0, :])))
+
+        # Run the simulation
+        time = 0
+        states = Cantera.SolutionArray(gas, extra=['t'])
+        states.append(reaction.thermo.state, t=time)
+        while time < np.min([end_time, velocity_vs_time[0, -1]]):
+            time = network.step()
+            states.append(reaction.thermo.state, t=time)
+
+        # Get results
+        times = states.t
+        pressures = states.P
+        targ_concs = np.zeros((len(targ_spcs), len(times)))
+        for idx, targ_spc in enumerate(targ_spcs):
+            targ_concs[idx, :] = states.X[:, gas.species_index(targ_spc)]
+        end_gas = gas
+        rop = None  # temporary
+
+        return targ_concs, pressures, times, rop, end_gas
+            
 
     # ---------------
 
     @staticmethod
-    def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, mdot, area, length,res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
+    def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, mdot, area, length,res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
         # Set the initial gas state
         if x_profile is not None:  # use T profile if given
             # Create the 2D array
             t_data = np.ndarray((len(x_profile[0]), len(t_profile_setpoints)))
-            for idx, array in enumerate(t_profile):
-                t_data[:, idx] = array
+            for ndx, array in enumerate(t_profile):
+                t_data[:, ndx] = array
             # Create the interp object and interp (note: the [0] gets rid of uncertainties)
             interp = RegularGridInterpolator((x_profile[0], t_profile_setpoints), t_data)
             start_temp = interp((0, temp))
@@ -66,7 +165,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def jsr(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, res_time, vol, prev_concs=None,mdot=None, max_iter=30000):
+    def jsr(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, res_time, vol, prev_concs=None, mdot=None, max_iter=30000):
 
         # Note: must set gas with mix before creating reservoirs!
         gas = Reactors.set_state(gas, temp, pressure, mix)
@@ -109,14 +208,14 @@ class Reactors:
 
         # Get results for target species
         targ_concs = np.zeros(len(targ_spcs))
-        for targ_idx, targ_spc in enumerate(targ_spcs):
+        for targ_ndx, targ_spc in enumerate(targ_spcs):
             if failure:
-                targ_concs[targ_idx] = None
+                targ_concs[targ_ndx] = None
             else:
                 if targ_spc in gas.species_names:
-                    targ_concs[targ_idx] = all_concs[gas.species_index(targ_spc)]
+                    targ_concs[targ_ndx] = all_concs[gas.species_index(targ_spc)]
                 else:  # if the targ_spc isn't in the mechanism
-                    targ_concs[targ_idx] = None
+                    targ_concs[targ_ndx] = None
         end_gas = gas
         rop = None
 
@@ -146,11 +245,11 @@ class Reactors:
         temps = states.T
         targ_concs = np.zeros((len(targ_spcs), len(times)))
 
-        for targ_idx, targ_spc in enumerate(targ_spcs):
+        for targ_ndx, targ_spc in enumerate(targ_spcs):
             if targ_spc is not None:
-                targ_concs[targ_idx, :] = states.X[:, gas.species_index(targ_spc)]
+                targ_concs[targ_ndx, :] = states.X[:, gas.species_index(targ_spc)]
             else:
-                targ_concs[targ_idx, :] = np.nan
+                targ_concs[targ_ndx, :] = np.nan
 
         rop = None  # will develop later... ???
         end_gas = gas
@@ -180,11 +279,11 @@ class Reactors:
         num_points = np.shape(flame.X)[1]  # length of second dim is num_points
         targ_concs = np.ndarray((len(targ_spcs), num_points))
 
-        for targ_idx, targ_spc in enumerate(targ_spcs):
+        for targ_ndx, targ_spc in enumerate(targ_spcs):
             if targ_spc in gas.species_names:
-                targ_concs[targ_idx] = flame.solution(targ_spc)
+                targ_concs[targ_ndx] = flame.solution(targ_spc)
             else:  # if the targ_spc isn't in the mechanism
-                targ_concs[targ_idx] = np.nan # todo-t: ???
+                targ_concs[targ_ndx] = np.nan # todo-t: ???
 
         # Get other results
         pos = flame.grid
@@ -196,16 +295,9 @@ class Reactors:
         return targ_concs, pos, vels, temps, rop, end_gas
 
     # ---------------
-
     @staticmethod
-    def burner():
-        #TODO-t: BRO WHAT IS THIS?!?
-        pass
-
-    #---------------
-    @staticmethod
-    def set_state(gas, temp: Quantity, pressure: Quantity, mix):
-
+    def set_state(gas, temp: Quantity, pressure: Quantity, mix: Compound):
+        #todo-t: do last after prev mix fixes
         pressure = pressure.to('pascal')
         """ come replace these dict methods once mix is no longer a dict
         if isinstance(mix, List) and ('fuel' in mix):
@@ -246,23 +338,3 @@ class Reactors:
             gas.TPX = temp, pressure, mix
 
         return gas
-
-    @staticmethod
-    def mix_str(mix, type):
-        """Converts a mixture to a string
-
-        mix: mixture description; either in terms of equivalence ratio
-        type mix: dict
-        type: set to either 'fuel' or 'oxid'
-        :return mix_string: Mixture description as a string
-        :rtype: str
-        """
-
-        # TODO: actually convert this into a string???
-        mix_string = '' # begin with empty string
-        component_count = len(mix[type]) # number of components
-        for i in range(component_count):
-            spc = mix[type][i]
-            if component_count > 1:
-                ratio = 4
-        return  mix_string

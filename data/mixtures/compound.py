@@ -1,4 +1,5 @@
-from data.common.value import Value
+import pint
+
 from data.mechanism.species import Species
 
 
@@ -8,10 +9,10 @@ class Compound:
     """
     def __init__(self,
                  species: Species,
-                 concentration: Value,
+                 concentration: pint.Quantity,
                  is_balanced: bool):
         self.species = species
-        self.concentration: Value = concentration
+        self.concentration: pint.Quantity = concentration
         self.is_balanced: bool = is_balanced
 
     def __repr__(self):
