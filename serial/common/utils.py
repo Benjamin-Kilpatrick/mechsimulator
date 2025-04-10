@@ -129,12 +129,9 @@ class Utils:
         'timestep': Condition.TIME_STEP,
         'end_time': Condition.END_TIME,
         'wavelength': Condition.WAVELENGTH,
-        'active_spc': Condition.ACTIVE_SPECIES,
         'abs_coeff': Condition.ABS_COEFFICIENT,
         'path_length': Condition.PATH_LENGTH,
-        'idt_targ': Condition.IGNITION_DELAY_TARGETS,
         'idt_method': Condition.IGNITION_DELAY_METHOD,
-        'target_spc': Condition.TARGET_SPECIES,
         'temp': Condition.TEMPERATURE,
         'pressure': Condition.PRESSURE,
         'phi': Condition.PHI,
@@ -177,8 +174,8 @@ class Utils:
         """
         if variable in cls.INV_VAR_CONVERT:
             return cls.INV_VAR_CONVERT[variable]
-        else:
-            raise KeyError(f'{variable.name} not found')
+        return None
+
 
 
     @staticmethod
