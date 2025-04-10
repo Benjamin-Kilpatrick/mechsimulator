@@ -187,7 +187,7 @@ class OutcomeSimulator(ReactionSimulator):
             elif experiment_set.measurement == Measurement.CONCENTRATION:
                 ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
             elif experiment_set.measurement == Measurement.OUTLET:
-                ydata = SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
+                ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
@@ -206,7 +206,7 @@ class OutcomeSimulator(ReactionSimulator):
                 experiment.conditions.get(Condition.PRESSURE),
                 experiment.compounds, mechanism,
                 experiment_set.get_target_species(),
-                previous_solution603 = previous_solution
+                previous_solution = previous_solution
             )
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position
             new_solution_list.append(new_solution)
