@@ -175,7 +175,10 @@ class MeasuredConditionLine(PlotterLine):
         return None
 
     def get_xdata(self):
-        return self.experiment_set.get_time_x_data()
+        if self.experiment_set.has(Condition.TIME):
+            return self.experiment_set.get_time_x_data()
+        else:
+            return self.experiment_set.get_condition_x_data()
 
     def get_ydata(self) -> np.ndarray:
         data = [experiment.get(self.condition) for experiment in self.experiment_set.measured_experiments]
