@@ -370,6 +370,10 @@ class ExperimentReader:
         return None, None
 
     @staticmethod
+    def parse_condition(value: Any, units: str):
+        pass
+
+    @staticmethod
     def read_all_conditions_excel(data: Dict[str, Dict[str, Any]]) -> ConditionSet:
         """
         Read all variables in the experiment data sheet dictionary
@@ -531,15 +535,10 @@ class ExperimentReader:
                 'length',
                 *ExperimentReader.get_variable_excel(Condition.WAVELENGTH, data, True)
             )
-            active_species: List[str] = ExperimentReader.get_variable_excel(Condition.ACTIVE_SPECIES, data, True)[0]
-
             variable_set.set(Condition.TIME_STEP, time_step)
             variable_set.set(Condition.END_TIME, end_time)
             variable_set.set(Condition.WAVELENGTH, wavelength)
-            variable_set.set(Condition.ACTIVE_SPECIES, active_species)
         elif measurement == Measurement.IGNITION_DELAY_TIME:
-            ignition_delay_targets: List[str] = \
-            ExperimentReader.get_variable_excel(Condition.IGNITION_DELAY_TARGETS, data, True)[0]
             ignition_delay_method: str = \
             ExperimentReader.get_variable_excel(Condition.IGNITION_DELAY_METHOD, data, True)[0]
             end_time: float = UnitParser.parse(
@@ -547,7 +546,6 @@ class ExperimentReader:
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Condition.IGNITION_DELAY_TARGETS, ignition_delay_targets)
             variable_set.set(Condition.IGNITION_DELAY_METHOD, ignition_delay_method)
             variable_set.set(Condition.END_TIME, end_time)
         elif measurement == Measurement.OUTLET:
@@ -567,13 +565,11 @@ class ExperimentReader:
         elif measurement == Measurement.LFS:
             pass
         elif measurement == Measurement.HALF_LIFE:
-            target_species: str = ExperimentReader.get_variable_excel(Condition.TARGET_SPECIES, data, True)
             end_time: float = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
-            variable_set.set(Condition.TARGET_SPECIES, target_species)
             variable_set.set(Condition.END_TIME, end_time)
         else:
             raise NotImplementedError(f"Measurement {measurement.name} is not implemented")
