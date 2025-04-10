@@ -1,7 +1,10 @@
-from typing import List, Set
+from typing import List, Set, Union, Any, Tuple
 
 import numpy
+import pint
+from numpy import ndarray, dtype
 from pint import Quantity
+from pint.facets.plain import PlainQuantity
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
@@ -107,20 +110,20 @@ class ExperimentSet:
         else:
             return self.generate_measured_conditions()
 
-    def get_condition_x_data(self) -> numpy.ndarray:
+    def get_condition_x_data(self) -> PlainQuantity[ndarray]:
         """
         Get the variable of interest data based on the x source
         :return: Simulated variable of interest if x source is simulation, measured variable of interest otherwise
         """
         if self.x_source == DataSource.SIMULATION:
-            num = (self.condition_range.end - self.condition_range.start) // self.condition_range.inc
+            num = int((self.condition_range.end.magnitude - self.condition_range.start.magnitude) // self.condition_range.inc.magnitude)
             return numpy.linspace(self.condition_range.start, self.condition_range.end, num, endpoint=True)
         if self.x_source == DataSource.MEASURED:
             condition_variable_range: List[Quantity] = []
             experiment: Experiment
             for experiment in self.measured_experiments:
                 condition_variable_range.append(experiment.conditions.get(self.condition_range.variable_of_interest))
-            return numpy.asarray(condition_variable_range)
+            return pint.Quantity.from_list(condition_variable_range)
 
     def get_time_x_data(self) -> numpy.ndarray:
         """
@@ -129,7 +132,7 @@ class ExperimentSet:
         """
         if self.x_source == DataSource.SIMULATION:
             end_time: Quantity = self.condition_range.get(Condition.END_TIME)
-            num = end_time // self.condition_range.get(Condition.TIME_STEP)
+            num = end_time.magnitude // self.condition_range.get(Condition.TIME_STEP).magnitude
             return numpy.linspace(0, end_time, num, endpoint=True)
         if self.x_source == DataSource.MEASURED:
             times: Set[Quantity] = set()
@@ -138,6 +141,11 @@ class ExperimentSet:
                 times.update(experiment.results.get_variable(Condition.TIME)[0])
 
             return numpy.asarray(sorted(list(times)))
+
+    def get_x_data(self) -> pint.Quantity:
+        if self.has(Condition.END_TIME):
+            return self.get_time_x_data()
+        return self.get_x_data()
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species
