@@ -6,6 +6,7 @@ import numpy as np
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.condition import Condition
 from data.experiments.common.idt_method import IDTMethod
+from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.mechanism.mechanism import Mechanism
@@ -284,5 +285,30 @@ class OutcomeSimulator(ReactionSimulator):
 
     @staticmethod
     def get_outlet(data):
-        return data
+        return data[:, -1]
+
+    @staticmethod
+    def calculate_absorption(experiment: Experiment)
+        active_species = experiment.conditions.get(Condition.ACTIVE_SPECIES)
+        absorption_coefficients = experiment.conditions.get(Condition.ABS_COEFFICIENT)
+        path_length = experiment.conditions.get(Condition.PATH_LENGTH)
+        pressure = experiment.conditions.get(Condition.PRESSURE)
+        target_species = experiment_set.get_target_species()
+        num_wavelengths = len(experiment.conditions.get(Condition.WAVELENGTH))
+        num_active_species = len(active_species)
+        num_targets = ydata.shape[1] if experiment_set.calculation_type == CalculationType.OUTCOME else ydata.shape[2]
+
+        raw_transmission = numpy.full((num_targets, num_wavelengths), numpy.nan)
+        for wavelength_ndx in range(num_wavelengths):
+            for species_ndx, curr_species in enumerate(active_species):
+                curr_coefficient = absorption_coefficients[wavelength_ndx + 1].get(curr_species)[0]
+                target_ndx = wavelength_ndx * (num_active_species + 1) + species_ndx
+                if curr_coefficient is not None:
+                    curr_concentration = concentrations[target_species.index(curr_species)]
+                    absorbance = curr_concentration * curr_coefficient * path_length * pressure
+                    raw_transmission[target_ndx] = numpy.exp(-absorbance)
+            total_ndx = (wavelength_ndx + 1) * (num_active_species + 1) - 1
+            raw_transmission[total_ndx] = numpy.nanprod(raw_transmission, axis=0)
+        percent_absorption = 100 * (1 - raw_transmission)
+        ydata = SimulatorUtils.interpolate(percent_absorption, times, experiment_set.get_time_x_data())
 
