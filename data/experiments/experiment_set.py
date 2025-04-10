@@ -132,7 +132,7 @@ class ExperimentSet:
         """
         if self.x_source == DataSource.SIMULATION:
             end_time: Quantity = self.condition_range.get(Condition.END_TIME)
-            num = end_time // self.condition_range.get(Condition.TIME_STEP)
+            num = end_time.magnitude // self.condition_range.get(Condition.TIME_STEP).magnitude
             return numpy.linspace(0, end_time, num, endpoint=True)
         if self.x_source == DataSource.MEASURED:
             times: Set[Quantity] = set()
@@ -141,6 +141,11 @@ class ExperimentSet:
                 times.update(experiment.results.get_variable(Condition.TIME)[0])
 
             return numpy.asarray(sorted(list(times)))
+
+    def get_x_data(self) -> pint.Quantity:
+        if self.has(Condition.END_TIME):
+            return self.get_time_x_data()
+        return self.get_x_data()
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species

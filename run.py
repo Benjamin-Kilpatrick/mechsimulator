@@ -29,8 +29,6 @@ def main():
 
     idx: int = 0
     for experiment_file in job.experiment_files:
-        experiment_file.x_source = DataSource.SIMULATION
-        experiment_file.get_condition_x_data()
         ExperimentWriter.write_yaml(f'{file.split(".")[0]}_{experiment_file.metadata.source}_{idx}.yaml',
                                     experiment_file)
         idx += 1
