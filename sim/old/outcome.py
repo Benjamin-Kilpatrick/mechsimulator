@@ -78,7 +78,6 @@ def process_rcm(raw_concs, raw_pressures, raw_times, conds_dct,
 
 
 def const_t_p(conds_dct, gas, meas_type, xdata, ydata_shape):
-
     # Get arrays of reactor inputs
     temps = conds_dct['temp']
     pressures = conds_dct['pressure']
@@ -100,10 +99,8 @@ def const_t_p(conds_dct, gas, meas_type, xdata, ydata_shape):
 
     return mech_ydata
 
-
 def process_const_t_p(raw_concs, raw_pressures, raw_temps, raw_times, conds_dct,
                       cond_idx, end_gas, meas_type, uniform_times):
-
     if meas_type == 'conc':
         # Simply interpolate the raw concentrations to fit the uniform times
         cond_ydata = util.interp(raw_concs, raw_times, uniform_times)

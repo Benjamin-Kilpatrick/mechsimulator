@@ -5,6 +5,7 @@ import numpy as np
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.condition import Condition
+from data.experiments.common.idt_method import IDTMethod
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.mechanism.mechanism import Mechanism
@@ -22,7 +23,7 @@ class OutcomeSimulator(ReactionSimulator):
         )
         end_time = experiment_set.condition_range.conditions.get(Condition.END_TIME)
         exp_ndx = 0
-        for experiment in experiment_set.simulated_experiments:
+        for experiment in experiment_set.get_conditions():
             concentrations, pressures, temps, times = Reactors.st(
                 experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE),
                 experiment.compounds, mechanism,
@@ -83,11 +84,11 @@ class OutcomeSimulator(ReactionSimulator):
             exp_ndx += 1
         return ydata
 
-    def plug_flow_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):  # TODO: Resolve Pathway
+    def plug_flow_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         dtype = 'object' if experiment_set.calculation_type == CalculationType.PATHWAY else 'float'
         ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype=dtype)
         exp_ndx = 0
-        for experiment in experiment_set.generate_simulated_conditions():
+        for experiment in experiment_set.get_conditions():
             concentrations, times, positions, rop, end_gas = Reactors.pfr(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
@@ -120,11 +121,11 @@ class OutcomeSimulator(ReactionSimulator):
         if previous_solutions is not None:
             prev_solns_shape = np.shape(previous_solutions)
             assert prev_solns_shape[0] == ydata_shape[0]  # [0] is # of conditions
-            assert prev_solns_shape[1] == mechanism.n_species  # TODO: Have existential crisis about what gas isn_species
+            assert prev_solns_shape[1] == mechanism.solution.n_species
 
-        all_concentrations = np.ndarray((ydata_shape[0], mechanism.n_species))
+        all_concentrations = np.ndarray((ydata_shape[0], mechanism.solution.n_species))
 
-        for exp_ndx, experiment in enumerate(experiment_set.generate_simulated_conditions()):
+        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
             concentrations, previous_concentrations, end_gas = Reactors.jsr(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
@@ -150,7 +151,7 @@ class OutcomeSimulator(ReactionSimulator):
 
     def rapid_compression_machine(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism))
-        for exp_ndx, experiment in enumerate(experiment_set.generate_simulated_conditions()):
+        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
             concentrations, pressures, times = Reactors.rcm(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
@@ -167,12 +168,11 @@ class OutcomeSimulator(ReactionSimulator):
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-
     def const_t_p(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         dtype = 'object' if experiment_set.calculation_type == CalculationType.PATHWAY else 'float'
         ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype=dtype)
 
-        for exp_ndx, experiment in enumerate(experiment_set.generate_simulated_conditions()):
+        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
             concentrations, pressures, temps, times, end_gas = Reactors.const_t_p(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
@@ -191,12 +191,11 @@ class OutcomeSimulator(ReactionSimulator):
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-
     def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions: List = None):
         ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism))
         new_solution_list = []
 
-        for exp_ndx, experiment in enumerate(experiment_set.generate_simulated_conditions()):
+        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
             if previous_solutions is not None:
                 previous_solution = previous_solutions[exp_ndx]
             else:
@@ -206,7 +205,7 @@ class OutcomeSimulator(ReactionSimulator):
                 experiment.conditions.get(Condition.PRESSURE),
                 experiment.compounds, mechanism,
                 experiment_set.get_target_species(),
-                previous_solution603 = previous_solution
+                previous_solution = previous_solution
             )
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position
             new_solution_list.append(new_solution)
@@ -219,4 +218,71 @@ class OutcomeSimulator(ReactionSimulator):
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
         return ydata, new_solution_list
+
+    @staticmethod
+    def calculate_idt(experiment_set: ExperimentSet, times, pressures, concentrations):  # TODO: Resolve pressure
+        """ Gets the ignition delay time for a shock-tube simulation. Can determine
+            IDT using one of three methods.
+
+            :param target_profile: the target concentration used to determine IDT
+            :param times: the time values corresponding to target
+            :param method: the method by which to determine the IDT; options are as
+                follows:
+                1: intersection of steepest slope with baseline
+                2: point of steepest slope
+                3: peak value of the target profile
+            :type method: str
+            :return idt: ignition delay time (s)
+            :rtype: float
+            :return warnings: possible warnings regarding the IDT determination
+            :rtype: list of strs
+        """
+
+        idt_targets = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGETS)
+        idt_methods = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_METHOD)
+        target_species = experiment_set.get_target_species()
+        ydata = numpy.ndarray((len(idt_targets)))
+        for target_ndx, idt_target in enumerate(idt_targets):
+            idt_method = idt_methods[target_ndx]
+            if idt_target == Condition.PRESSURE:
+                target_profile = pressures
+            else:
+                species_ndx = target_species.index(idt_target)
+                target_profile = concentrations[species_ndx]
+
+            # Get first derivative (note: np.gradient uses central differences)
+            first_deriv = numpy.gradient(target_profile, times)
+            steepest_ndx = numpy.argmax(first_deriv)
+            steepest_slope = first_deriv[steepest_ndx]
+            steepest_time = times[steepest_ndx]
+            steepest_val = target_profile[steepest_ndx]
+
+            # If using the baseline extrapolation or steepest slope methods, check that
+            # the max slope isn't the last point
+            if steepest_ndx + 1 == len(times) and idt_method in (IDTMethod.BASELINE_EXTRAPOLATION, IDTMethod.MAX_SLOPE):
+                print('Max slope at last point')
+
+            if idt_method == IDTMethod.BASELINE_EXTRAPOLATION:
+                # Get the slope and intercept of the baseline, assuming 0 for now
+                initial_slope = 0
+                initial_int = 0
+                # Get the y-intercept of the steepest tangent line
+                steepest_int = steepest_val - steepest_slope * steepest_time
+                # Find the intersection of the two lines
+                ydata[target_ndx] = (initial_int - steepest_int) / (steepest_slope - initial_slope)
+            elif idt_method == IDTMethod.MAX_SLOPE:
+                ydata[target_ndx] = steepest_time
+            elif idt_method == IDTMethod.MAX_VALUE:
+                # Check that the max value doesn't occur at the last point
+                if numpy.argmax(target_profile) + 1 == len(times):
+                    print('Peak value at last point')
+                ydata[target_ndx] = times[numpy.argmax(target_profile)]
+            else:
+                raise NotImplementedError
+
+        return ydata
+
+    @staticmethod
+    def get_outlet(data):
+        return data
 

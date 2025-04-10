@@ -14,10 +14,7 @@ class Simulator:
 
     @staticmethod
     def run_experiment_set(experiment_set: ExperimentSet, mechanism: List[Mechanism]):
-        if experiment_set.calculation_type == CalculationType.OUTCOME:
-            Simulator.outcome_simulator.simulate_experiment_set(experiment_set, mechanism)
-        elif experiment_set.calculation_type == CalculationType.PATHWAY:  # TODO: reconcile differing measurement types
-            PathwaySimulator.simulate_experiment_set(experiment_set, mechanism)
+        if experiment_set.calculation_type == CalculationType.OUTCOME or experiment_set.calculation_type == CalculationType.PATHWAY:
             Simulator.outcome_simulator.simulate_experiment_set(experiment_set, mechanism)
         elif experiment_set.calculation_type == CalculationType.SENSITIVITY:
             Simulator.sensitivity_simulator.simulate_experiment_set(experiment_set, mechanism)
