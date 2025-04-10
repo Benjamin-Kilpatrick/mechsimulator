@@ -13,6 +13,7 @@ from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
+from data.experiments.target_species import TargetSpecies
 from data.mechanism.species import Species
 from data.mixtures.compound import Compound
 
@@ -32,7 +33,8 @@ class ExperimentSet:
                  measurement: Measurement,
                  simulated_species: List[Species],
                  simulated_compounds: List[Compound],
-                 measured_experiments: List[Experiment]):
+                 measured_experiments: List[Experiment],
+                 targets: TargetSpecies):
         """
         Constructor
         :param metadata: The meta data about the experiment
@@ -45,6 +47,7 @@ class ExperimentSet:
         :param simulated_species: The chemical species to describe
         :param simulated_compounds: The chemical mixtures of the starting solution
         :param measured_experiments: All of the real data of real experiments run
+        :param targets: All species targets and special subset targets
         """
         self.metadata: MetaData = metadata
         self.calculation_type: CalculationType = calculation_type
@@ -60,8 +63,9 @@ class ExperimentSet:
         self.simulated_compounds: List[Compound] = simulated_compounds
         self.simulated_experiments: List[Experiment] = []
 
-        # TODO implement this operation
         self.measured_experiments: List[Experiment] = measured_experiments
+        self.targets: TargetSpecies = targets
+
 
     def __repr__(self) -> str:
         return f"<ExperimentSet calculation_type:{self.calculation_type.name} reaction:{self.reaction.name}>"
@@ -137,3 +141,10 @@ class ExperimentSet:
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species
+
+    def set_simulated_experiments(self, experiments: List[Experiment]):
+        self.simulated_experiments = experiments
+
+    def has(self, condition: Condition) -> bool:
+        return self.condition_range.has(condition)
+

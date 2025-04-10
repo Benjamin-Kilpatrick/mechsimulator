@@ -12,12 +12,14 @@ from data.experiments.common.data_source import DataSource
 from data.experiments.common.phi import Phi
 from data.experiments.common.condition_range import ConditionRange
 from data.experiments.common.condition_set import Condition, ConditionSet
+from data.experiments.common.target import Target
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
+from data.experiments.target_species import TargetSpecies
 from data.mechanism.species import Species
 from data.mixtures.compound import Compound
 from serial.common.env_path import EnvPath
@@ -169,7 +171,14 @@ class ExperimentReader:
         simulated_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(info_dict['mix'],
                                                                                      simulated_species)
 
+
         measured_experiments: List[Experiment] = []
+
+
+        targets: TargetSpecies = TargetSpecies()
+
+        for species in simulated_species:
+            targets.add_target(species)
 
         sheet: str
         for sheet in experiment_sheets:
@@ -218,7 +227,8 @@ class ExperimentReader:
             measurement,
             simulated_species,
             simulated_compounds,
-            measured_experiments
+            measured_experiments,
+            targets
         )
 
     @staticmethod
@@ -236,6 +246,25 @@ class ExperimentReader:
         :return: the experiment set that has been read
         """
         pass
+
+    @staticmethod
+    def parse_special_targets(data: Dict[str, Any], targets: TargetSpecies):
+        if 'half_life_targ' in data['conds']:
+            targets.add_special_target(Target.HALF_LIFE, targets.get_species_by_name(data['conds']['half_life_targ']))
+        if 'idt_targ' in data['conds']:
+            idt_targ: str = data['conds']['idt_targ']
+            if idt_targ == 'temp':
+                pass
+            elif idt_targ == 'pressure':
+                pass
+            else:
+                targets.add_special_target(Target.IGNITION_DELAY, targets.get_species_by_name(idt_targ))
+        if 'active_spc' in data['conds']:
+            targets.add_special_target(Target.ACTIVE, targets.get_species_by_name(data['conds']['active_spc']))
+        if 'fuel' in data['mix']:
+            targets.add_special_target(Target.FUEL, targets.get_species_by_name(data['mix']['fuel']))
+
+
 
     @staticmethod
     def parse_species_excel(data: Dict[str, Any]) -> List[Species]:
