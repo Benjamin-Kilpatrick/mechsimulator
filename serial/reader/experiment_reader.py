@@ -311,6 +311,7 @@ class ExperimentReader:
         if variable_name in data:
             var_data: Dict = data[variable_name]
 
+            # variable == Condition.TARGET_SPECIES or \
             if variable == Condition.TIME_STEP or \
                     variable == Condition.END_TIME or \
                     variable == Condition.WAVELENGTH or \
@@ -319,7 +320,6 @@ class ExperimentReader:
                     variable == Condition.PATH_LENGTH or \
                     variable == Condition.IGNITION_DELAY_TARGETS or \
                     variable == Condition.IGNITION_DELAY_METHOD or \
-                    variable == Condition.TARGET_SPECIES or \
                     variable == Condition.TEMPERATURE or \
                     variable == Condition.PRESSURE or \
                     variable == Condition.LENGTH or \

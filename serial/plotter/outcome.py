@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter as Formatter
 from serial.plotter import plotter_util
-from serial.exp import ALLOWED_UNITS
 
 # Define some stuff for plot formatting
 COLORS = ['Red', 'Blue', 'Green', 'Black', 'Magenta', 'Pink']
@@ -445,6 +444,7 @@ def _mech_frmt(exp_set, set_frmt, conds_src, mech_idx=None):
             desired units. Note: Celsius and Fahrenheit are not allowed (this is
             enforced in the parser)
         """
+        raise NotImplementedError("get_conv_factors contains removed dict ALLOWED_UNITS")
 
         if units is not None:
             allowed_units = ALLOWED_UNITS[quant][0]

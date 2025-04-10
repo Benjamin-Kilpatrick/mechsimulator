@@ -1,7 +1,6 @@
 import os
 import matplotlib.backends.backend_pdf as plt_pdf
 from sim.old import util as sim_util
-from serial.exp import ALLOWED_UNITS
 
 
 def build_pdf(figs_axes, filename='output.pdf', path=None):
@@ -77,6 +76,7 @@ def get_targ_titles(exp_set, yunit=None):
 
 
 def get_cond_titles(exp_set, cond_src, xunit=None):
+    raise NotImplementedError("get_cond_titles contains removed dict ALLOWED_UNITS")
 
     sim_util.check_srcs('plot', cond_src)  # dummy value for x_src
 

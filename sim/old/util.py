@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from serial.exp import ALLOWED_UNITS
+#from serial.exp import ALLOWED_UNITS
 
 #from io.exp import ALLOWED_UNITS
 
@@ -179,6 +179,7 @@ def get_mech_info(exp_set, calc_type, x_src, cond_src, gases):
         (1) outcome, (2) sensitivity, or (3) rate of production
 
     """
+    raise NotImplementedError("get_mech_info contains removed dict ALLOWED_UNITS")
 
     def get_times(exp_set, x_src):
 
@@ -209,7 +210,6 @@ def get_mech_info(exp_set, calc_type, x_src, cond_src, gases):
             titles.append((fake_targ + ', ' + methods[idx]))
 
         return targs, titles
-
     # Get the set variable and check that options were used correctly
     plot_var = exp_set['plot']['variable'][0]
     units = ALLOWED_UNITS[plot_var][0][0]

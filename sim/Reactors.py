@@ -40,9 +40,12 @@ class Reactors:
     @staticmethod
     def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, mdot, area, length,res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
         # Set the initial gas state
-        if x_profile is not None:  # use T profile if given
+        if x_profile is not None and t_profile is not None:  # use T profile if given
             # Create the 2D array
-            t_data = np.ndarray((len(x_profile[0]), len(t_profile_setpoints)))
+            t_data = np.ndarray(
+                (len(x_profile), # changed from len(x_profile)[0]
+                 len(t_profile_setpoints))
+            )
             for idx, array in enumerate(t_profile):
                 t_data[:, idx] = array
             # Create the interp object and interp (note: the [0] gets rid of uncertainties)

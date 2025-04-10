@@ -7,8 +7,10 @@ from matplotlib.ticker import FormatStrFormatter as Formatter
 #from rdkit.Contrib.LEF.AddLabels import labels
 
 from data.experiments.common.calculation_type import CalculationType
+from data.experiments.common.condition import Condition
 from data.experiments.common.data_source import DataSource
-from data.experiments.common.variable import Variable
+
+
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.experiments.reaction import Reaction
@@ -21,50 +23,50 @@ from serial.plotter.outcome import build_figs_axes, _mech_frmt, single_mech
 # this is a mapping from variable type to allowed unit
 # the first value in the tuple is the default unit
 VARIABLE_UNITS = {
-    Variable.TEMPERATURE: ('K', 'C', 'F', 'R'),
-    Variable.PRESSURE: ('atm', 'bar', 'kPa', 'Pa', 'MPa', 'torr'),
-    Variable.TIME: ('s', 'ms', 'micros'),
-    #Variable.CONC: ('X', 'ppm', '%', 'molec/cm3'),
-    Variable.LENGTH: ('m', 'cm', 'mm'),
-    Variable.AREA: ('m2', 'cm2', 'mm2'),
-    Variable.VOLUME: ('m3', 'cm3', 'mm3'),
-    Variable.ABS_COEFFICIENT: ('m-1atm-1', 'cm-1atm-1',),
-    #Variable.ABS: ('%', 'fraction'),
-    Variable.DPDT: ('%/ms',),
-    Variable.MDOT: ('kg/s', 'g/s'),
-    #Variable.VELOCITY: ('cm/s', 'm/s'),
-    Variable.PHI: ('',)
+    Condition.TEMPERATURE: ('K', 'C', 'F', 'R'),
+    Condition.PRESSURE: ('atm', 'bar', 'kPa', 'Pa', 'MPa', 'torr'),
+    Condition.TIME: ('s', 'ms', 'micros'),
+    #Condition.CONC: ('X', 'ppm', '%', 'molec/cm3'),
+    Condition.LENGTH: ('m', 'cm', 'mm'),
+    Condition.AREA: ('m2', 'cm2', 'mm2'),
+    Condition.VOLUME: ('m3', 'cm3', 'mm3'),
+    Condition.ABS_COEFFICIENT: ('m-1atm-1', 'cm-1atm-1',),
+    #Condition.ABS: ('%', 'fraction'),
+    Condition.DPDT: ('%/ms',),
+    Condition.MDOT: ('kg/s', 'g/s'),
+    #Condition.VELOCITY: ('cm/s', 'm/s'),
+    Condition.PHI: ('',)
 }
 
 VARIABLE_DISPLAY_NAMES = {
-    Variable.TEMPERATURE: 'Temperature',
-    Variable.PRESSURE: 'Pressure',
-    Variable.TIME: 'Time',
-    #Variable.CONC: 'Mole fraction',
-    Variable.LENGTH: 'Length',
-    Variable.AREA: 'Area',
-    Variable.VOLUME: 'Volume',
-    Variable.ABS_COEFFICIENT: 'Absorption coefficient',
-    Variable.DPDT: 'dP/dt',
-    Variable.MDOT: 'Mass flow rate',
-    #Variable.VELOCITY: 'Velocity',
-    Variable.PHI: 'Equivalence ratio',
+    Condition.TEMPERATURE: 'Temperature',
+    Condition.PRESSURE: 'Pressure',
+    Condition.TIME: 'Time',
+    #Condition.CONC: 'Mole fraction',
+    Condition.LENGTH: 'Length',
+    Condition.AREA: 'Area',
+    Condition.VOLUME: 'Volume',
+    Condition.ABS_COEFFICIENT: 'Absorption coefficient',
+    Condition.DPDT: 'dP/dt',
+    Condition.MDOT: 'Mass flow rate',
+    #Condition.VELOCITY: 'Velocity',
+    Condition.PHI: 'Equivalence ratio',
 }
 
 MEASUREMENT_UNITS = {
-    #Variable.TEMPERATURE: ('K', 'C', 'F', 'R'),
-    #Variable.PRESSURE: ('atm', 'bar', 'kPa', 'Pa', 'MPa', 'torr'),
-    #Variable.TIME: ('s', 'ms', 'micros'),
+    #Condition.TEMPERATURE: ('K', 'C', 'F', 'R'),
+    #Condition.PRESSURE: ('atm', 'bar', 'kPa', 'Pa', 'MPa', 'torr'),
+    #Condition.TIME: ('s', 'ms', 'micros'),
     Measurement.CONCENTRATION: ('X', 'ppm', '%', 'molec/cm3'),
-    #Variable.LENGTH: ('m', 'cm', 'mm'),
-    #Variable.AREA: ('m2', 'cm2', 'mm2'),
-    #Variable.VOLUME: ('m3', 'cm3', 'mm3'),
-    #Variable.ABS_COEFFICIENT: ('m-1atm-1', 'cm-1atm-1',),
+    #Condition.LENGTH: ('m', 'cm', 'mm'),
+    #Condition.AREA: ('m2', 'cm2', 'mm2'),
+    #Condition.VOLUME: ('m3', 'cm3', 'mm3'),
+    #Condition.ABS_COEFFICIENT: ('m-1atm-1', 'cm-1atm-1',),
     Measurement.ABSORPTION: ('%', 'fraction'),
-    #Variable.DPDT: ('%/ms',),
-    #Variable.MDOT: ('kg/s', 'g/s'),
-    #Variable.VELOCITY: ('cm/s', 'm/s'),
-    #Variable.PHI: ('',)
+    #Condition.DPDT: ('%/ms',),
+    #Condition.MDOT: ('kg/s', 'g/s'),
+    #Condition.VELOCITY: ('cm/s', 'm/s'),
+    #Condition.PHI: ('',)
 }
 
 COLORS = ['Red', 'Blue', 'Green', 'Black', 'Magenta', 'Pink']
@@ -108,21 +110,9 @@ class PlotterFormat:
         self.xscale = 'linear'
         self.yscale = 'linear'
 
-class PlotterFigure:
-    def __init__(self):
-        self.fig = plt.figure(figsize=(8.5, 11))
-        self.lines:List[PlotterLine] = []
-
-class Plot:
-    def __init__(self):
-        self.format = PlotterFormat()
-        self.figures: List[PlotterFigure] = []
-
-
-
 class PlotterLine(ABC):
     @abstractmethod
-    def get_ydata(self):
+    def get_ydata(self) -> np.ndarray:
         pass
 
     @abstractmethod
@@ -149,11 +139,7 @@ class PlotterLine(ABC):
     def get_zorder(self):
         pass
 
-    @abstractmethod
-    def get_ax(self):
-        pass
-
-    def plot(self):
+    def plot(self, ax):
         mech_xdata = self.get_xdata()
         line_ydata = self.get_ydata()
         label = self.get_label()
@@ -161,12 +147,79 @@ class PlotterLine(ABC):
         linestyle = self.get_linestyle()
         marker = self.get_marker()
         zorder = self.get_zorder()
-        self.get_ax().plot(mech_xdata, line_ydata, label=label, color=color, linestyle=linestyle, marker=marker, zorder=zorder)
+        ax.plot(mech_xdata, line_ydata, label=label, color=color, linestyle=linestyle, marker=marker, zorder=zorder)
 
+
+class MeasuredConditionLine(PlotterLine):
+    """
+    For plotting a condition in a measured experiment
+    """
+
+    def __init__(self, condition: Condition, experiment_set: ExperimentSet):
+        self.condition = condition
+        self.experiment_set = experiment_set
+
+    def get_label(self):
+        return "Ur mom"
+
+    def get_color(self):
+        return "green"
+
+    def get_linestyle(self):
+        return "-"
+
+    def get_marker(self):
+        return "#"
+
+    def get_zorder(self):
+        return None
+
+    def get_xdata(self):
+        return self.experiment_set.get_time_x_data()
+
+    def get_ydata(self) -> np.ndarray:
+        data = [experiment.get(self.condition) for experiment in self.experiment_set.measured_experiments]
+        return np.asarray(data)
+
+class PlotterFigure: # Called plot in o.g.
+    def __init__(self, lines:List[PlotterLine]):
+        self.fig = plt.figure(figsize=(8.5, 11))
+        self.lines:List[PlotterLine] = lines
+
+    def plot(self):
+        for line in self.lines:
+            line.plot(self.fig)
+
+    @staticmethod
+    def load_from_experiment_set(experiment_set:ExperimentSet):
+        lines = []
+        if len(experiment_set.measured_experiments) > 0:
+            conditions = experiment_set.measured_experiments[0].conditions
+            for condition in conditions.get_conditions():
+                lines.append(MeasuredConditionLine(condition, experiment_set))
+        return PlotterFigure(lines)
+
+class Plot:
+    def __init__(self, job: Job):
+        self.format = PlotterFormat()
+        self.figures: List[PlotterFigure] = []
+        for experiment_set in job.experiment_files:
+            self.figures.append(PlotterFigure.load_from_experiment_set(experiment_set))
+
+    def plot(self):
+        for figure in self.figures:
+            figure.plot()
 
 
 class Plotter:
+    @staticmethod
+    def plot(job: Job, filename: str = 'output.pdf', output_path: str = None):
+        plot = Plot(job)
+        plot.plot()
 
+
+
+class PlotterOld:
     @staticmethod
     def plot(job: Job, filename: str='output.pdf', output_path: str=None):
         """
@@ -273,7 +326,7 @@ class Plotter:
         return mech_names
 
     @staticmethod
-    def plotter_util__get_cond_titles(experiment_set: ExperimentSet, xunit=None) -> (List[str], str, Variable):
+    def plotter_util__get_cond_titles(experiment_set: ExperimentSet, xunit=None) -> (List[str], str, Condition):
         meas_type = experiment_set.measurement
         plot_var = experiment_set.condition_range.variable
         units = VARIABLE_UNITS[plot_var][0]  # default unit used for plot_var
