@@ -187,7 +187,7 @@ class ExperimentReader:
             exp_dict = ExperimentReader.convert_excel_sheet_to_dict(exp_sheet, exp_dict)
 
             # conditions and compounds
-            exp_conditions: ConditionSet = ExperimentReader.read_all_variables_excel(exp_dict['conds'])
+            exp_conditions: ConditionSet = ExperimentReader.read_all_conditions_excel(exp_dict['conds'])
             exp_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
@@ -371,21 +371,21 @@ class ExperimentReader:
         return None, None
 
     @staticmethod
-    def read_all_variables_excel(data: Dict[str, Dict[str, Any]]) -> ConditionSet:
+    def read_all_conditions_excel(data: Dict[str, Dict[str, Any]]) -> ConditionSet:
         """
         Read all variables in the experiment data sheet dictionary
         :param data: Dictionary of experiment data from an Excel file
         :return: a set of all variable conditions
         """
-        variable_set: ConditionSet = ConditionSet()
+        condition_set: ConditionSet = ConditionSet()
 
-        variable: Condition
-        for variable in Condition:
-            if Utils.convert_variable_excel_str(variable) in data:
-                value: Any = UnitParser.parse_all(*ExperimentReader.get_variable_excel(variable, data, False))
-                variable_set.set(variable, value)
+        condition: Condition
+        for condition in Condition:
+            if Utils.convert_variable_excel_str(condition) in data:
+                value: Any = UnitParser.parse_all(*ExperimentReader.get_variable_excel(condition, data, False))
+                condition_set.set(condition, value)
 
-        return variable_set
+        return condition_set
 
     @staticmethod
     def parse_variables_excel(
