@@ -1,4 +1,4 @@
-from typing import Self
+#from typing import Self
 
 
 class Species:
@@ -20,7 +20,7 @@ class Species:
         self.charge: int = charge
         self.excited: bool = excited
 
-    def __eq__(self, other: Self):
+    def __eq__(self, other):# Self):
         return self.name == other.name and self.smiles == other.smiles and self.InChI == other.InChI
 
     def __repr__(self) -> str:

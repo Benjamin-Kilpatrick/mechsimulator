@@ -9,7 +9,6 @@ from pint import Quantity
 from data.common.value import Value
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.data_source import DataSource
-from data.experiments.common.phi import Phi
 from data.experiments.common.condition_range import ConditionRange
 from data.experiments.common.condition_set import Condition, ConditionSet
 from data.experiments.common.target import Target
@@ -344,10 +343,8 @@ class ExperimentReader:
             if variable == Condition.TIME_STEP or \
                     variable == Condition.END_TIME or \
                     variable == Condition.WAVELENGTH or \
-                    variable == Condition.ACTIVE_SPECIES or \
                     variable == Condition.ABS_COEFFICIENT or \
                     variable == Condition.PATH_LENGTH or \
-                    variable == Condition.IGNITION_DELAY_TARGETS or \
                     variable == Condition.IGNITION_DELAY_METHOD or \
                     variable == Condition.TEMPERATURE or \
                     variable == Condition.PRESSURE or \
@@ -514,11 +511,13 @@ class ExperimentReader:
             variable_set.set(Condition.END_TIME, end_time)
         elif reaction == Reaction.FREE_FLAME:
             if variable != Condition.PHI:
-                phi: Phi = UnitParser.parse(
-                    'phi',
-                    *ExperimentReader.get_variable_excel(Condition.PHI, data, False)
-                )
-                variable_set.set(Condition.PHI, phi)
+                pass
+                # TODO! Marcello said to remove Phi
+                # phi: Phi = UnitParser.parse(
+                #     'phi',
+                #     *ExperimentReader.get_variable_excel(Condition.PHI, data, False)
+                # )
+                # variable_set.set(Condition.PHI, phi)
         else:
             raise NotImplementedError(f"Reaction {reaction.name} is not implemented")
 
