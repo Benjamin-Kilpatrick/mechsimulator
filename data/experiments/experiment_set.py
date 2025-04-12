@@ -1,4 +1,4 @@
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Dict
 
 import numpy
 import pint
@@ -15,6 +15,7 @@ from data.experiments.experiment import Experiment
 from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
 from data.experiments.mixture import Mixture
+from data.experiments.mixture_type import MixtureType
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
 from data.experiments.target_species import TargetSpecies
@@ -35,7 +36,7 @@ class ExperimentSet:
                  reaction: Reaction,
                  measurement: Measurement,
                  simulated_species: List[Species],
-                 simulated_mixture: Mixture,
+                 simulated_mixture: Dict[MixtureType, Mixture],
                  measured_experiments: List[Experiment],
                  targets: TargetSpecies):
         """
@@ -63,12 +64,11 @@ class ExperimentSet:
         self.measurement: Measurement = measurement
 
         self.simulated_species: List[Species] = simulated_species
-        self.simulated_mixture: Mixture = simulated_mixture
-        self.simulated_experiments: Optional[List[Experiment]] = None
+        self.simulated_mixture: Dict[MixtureType, Mixture] = simulated_mixture
+        self.all_simulated_experiments: List[List[Experiment]] = []
 
         self.measured_experiments: List[Experiment] = measured_experiments
         self.targets: TargetSpecies = targets
-
 
     def __repr__(self) -> str:
         return f"<ExperimentSet calculation_type:{self.calculation_type.name} reaction:{self.reaction.name}>"
@@ -100,16 +100,17 @@ class ExperimentSet:
         """
         return self.measured_experiments
 
-    def get_conditions(self) -> List[Experiment]:
+    def generate_conditions(self) -> List[Experiment]:
         """
         generate the experiment conditions based on the condition source
         """
-        if self.simulated_experiments is None:
-            if self.condition_source == DataSource.SIMULATION:
-                self.simulated_experiments = self.generate_simulated_conditions()
-            else:
-                self.simulated_experiments = self.generate_measured_conditions()
-        return self.simulated_experiments
+        if self.condition_source == DataSource.SIMULATION:
+            return self.generate_simulated_conditions()
+        else:
+            return self.generate_measured_conditions()
+
+    def add_simulated_experiments(self, simulated_experiments: List[Experiment]):
+        self.all_simulated_experiments.append(simulated_experiments)
 
     def get_condition_x_data(self, x_source: DataSource = None) -> PlainQuantity[ndarray]:
         """
@@ -118,7 +119,8 @@ class ExperimentSet:
         """
         source: DataSource = x_source if x_source is not None else self.x_source
         if source == DataSource.SIMULATION:
-            num = int((self.condition_range.end.magnitude - self.condition_range.start.magnitude) // self.condition_range.inc.magnitude)
+            num = int((
+                                  self.condition_range.end.magnitude - self.condition_range.start.magnitude) // self.condition_range.inc.magnitude)
             return numpy.linspace(self.condition_range.start, self.condition_range.end, num, endpoint=True)
         if source == DataSource.MEASURED:
             condition_variable_range: List[Quantity] = []
@@ -155,8 +157,7 @@ class ExperimentSet:
         return self.simulated_species
 
     def set_simulated_experiments(self, experiments: List[Experiment]):
-        self.simulated_experiments = experiments
+        self.all_simulated_experiments = experiments
 
     def has(self, condition: Condition) -> bool:
         return self.condition_range.has(condition)
-

@@ -113,7 +113,7 @@ class ExperimentWriter:
                     }
                 )
 
-            for species, quantity in experiment.mixture.species:
+            for species, quantity in experiment.mixtures.species:
                 experiment_dict['mixture'].append({
                         'name': species.name,
                         'concentration': {
@@ -123,9 +123,9 @@ class ExperimentWriter:
                             }
                     }
                 )
-            if experiment.mixture.balanced is not None:
+            if experiment.mixtures.balanced is not None:
                 experiment_dict['mixture'].append({
-                        'name': experiment.mixture.balanced.name,
+                        'name': experiment.mixtures.balanced.name,
                         'concentration': {
                             'value': 'bal'
                         }
