@@ -1,24 +1,24 @@
-from typing import List, Set, Union, Any, Tuple
+from typing import List, Set, Optional
 
 import numpy
 import pint
-from numpy import ndarray, dtype
+from numpy import ndarray
 from pint import Quantity
 from pint.facets.plain import PlainQuantity
 
 from data.experiments.common.calculation_type import CalculationType
-from data.experiments.common.data_source import DataSource
 from data.experiments.common.condition import Condition
 from data.experiments.common.condition_range import ConditionRange
 from data.experiments.common.condition_set import ConditionSet
+from data.experiments.common.data_source import DataSource
 from data.experiments.experiment import Experiment
 from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
+from data.experiments.mixture import Mixture
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
 from data.experiments.target_species import TargetSpecies
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
 
 
 class ExperimentSet:
@@ -35,7 +35,7 @@ class ExperimentSet:
                  reaction: Reaction,
                  measurement: Measurement,
                  simulated_species: List[Species],
-                 simulated_compounds: List[Compound],
+                 simulated_mixture: Mixture,
                  measured_experiments: List[Experiment],
                  targets: TargetSpecies):
         """
@@ -48,7 +48,7 @@ class ExperimentSet:
         :param reaction: The type of reaction to simulate
         :param measurement: The type of measurement to perform
         :param simulated_species: The chemical species to describe
-        :param simulated_compounds: The chemical mixtures of the starting solution
+        :param simulated_mixture: The chemical mixtures of the starting solution
         :param measured_experiments: All of the real data of real experiments run
         :param targets: All species targets and special subset targets
         """
@@ -63,8 +63,8 @@ class ExperimentSet:
         self.measurement: Measurement = measurement
 
         self.simulated_species: List[Species] = simulated_species
-        self.simulated_compounds: List[Compound] = simulated_compounds
-        self.simulated_experiments: List[Experiment] = []
+        self.simulated_mixture: Mixture = simulated_mixture
+        self.simulated_experiments: Optional[List[Experiment]] = None
 
         self.measured_experiments: List[Experiment] = measured_experiments
         self.targets: TargetSpecies = targets
@@ -86,7 +86,7 @@ class ExperimentSet:
             simulated.append(
                 Experiment(
                     condition,
-                    self.simulated_compounds,
+                    self.simulated_mixture,
                     Results()
                 )
             )
@@ -102,13 +102,14 @@ class ExperimentSet:
 
     def get_conditions(self) -> List[Experiment]:
         """
-        Get the experiment conditions based on the condition source
-        :return: Simulated variable conditions if condition source is simulation, measured experiment conditions otherwise
+        generate the experiment conditions based on the condition source
         """
-        if self.condition_source == DataSource.SIMULATION:
-            return self.generate_simulated_conditions()
-        else:
-            return self.generate_measured_conditions()
+        if self.simulated_experiments is None:
+            if self.condition_source == DataSource.SIMULATION:
+                self.simulated_experiments = self.generate_simulated_conditions()
+            else:
+                self.simulated_experiments = self.generate_measured_conditions()
+        return self.simulated_experiments
 
     def get_condition_x_data(self, x_source: DataSource = None) -> PlainQuantity[ndarray]:
         """
