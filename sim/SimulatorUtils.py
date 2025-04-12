@@ -91,7 +91,7 @@ class SimulatorUtils:
         if experiment_set.measurement in (Measurement.ABSORPTION, Measurement.EMISSION):
             num_wavelengths = len(experiment_set.condition_range.conditions.get(Condition.WAVELENGTH))
             num_active_species = len(experiment_set.condition_range.conditions.get(Condition.ACTIVE_SPECIES))
-            shape.append(num_wavelengths * (num_active_species + 1))
+            shape.append(num_wavelengths * (num_active_species + 1))  # Add one for aggregation
         elif experiment_set.measurement == Measurement.HALF_LIFE:
             shape.append(1)
         else:

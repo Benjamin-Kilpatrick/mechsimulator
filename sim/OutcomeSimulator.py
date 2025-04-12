@@ -288,7 +288,7 @@ class OutcomeSimulator(ReactionSimulator):
         return data[:, -1]
 
     @staticmethod
-    def calculate_absorption(experiment: Experiment)
+    def calculate_absorption(experiment: Experiment):
         active_species = experiment.conditions.get(Condition.ACTIVE_SPECIES)
         absorption_coefficients = experiment.conditions.get(Condition.ABS_COEFFICIENT)
         path_length = experiment.conditions.get(Condition.PATH_LENGTH)

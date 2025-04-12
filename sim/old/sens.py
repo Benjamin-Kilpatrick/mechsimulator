@@ -187,35 +187,12 @@ def st(conds_dct, gas, meas_type, xdata, ydata_shape, factor=0.01):
     num_rxns = gas.n_reactions
     sens_coeffs = np.full(ydata_shape, np.nan)
 
-    # Hardcoding for Jaeyoung's C2H6 simulations
-    # hardcoded_rxn_idxs = [279, 284, 253, 285, 59, 60, 48, 204, 231, 214, 289, 276, 205,
-    #             158, 254, 2, 3, 326, 152, 271, 262, 250, 156, 210, 568, 1]
-
-    # Hardcoding for Jaeyoung's C2H6 simulations; updated mech (just added 1 to
-    # all numbers above 7 from the above list since he added one new reaction in
-    # the first 8) (actually, being lazy and just subtracting 1 from the numbers
-    # below 7, then adding 1 to all)
-    #hardcoded_rxn_idxs = [279, 284, 253, 285, 59, 60, 48, 204, 231, 214, 289, 276, 205,
-    #            158, 254, 1, 2, 326, 152, 271, 262, 250, 156, 210, 568]
-    #hardcoded_rxn_idxs = np.array(hardcoded_rxn_idxs)
-    #hardcoded_rxn_idxs += 1
-
-    hardcoded_rxn_idxs = [0, 1, 2]
-    
-
-    # Hardcoding for Curran C3H8 paper (using Luna's mech!)
-    # hardcoded_rxn_idxs = [9,596,118,656,472,365,417,10,364,169,369,164,393,14]
-
-    # Hardcoding for Curran C3H8 paper (using full NUIG1.1 mech!)
-    # hardcoded_rxn_idxs = [642,37,38,177,776,125,739,693,748,641,687,679,688]
-
     # Should I take absolute value? Should ref result ever be negative?
     ref_result += np.finfo(float).eps  # add epsilon to prevent divide by 0
 
     exclude_spcs = ('H',)
     print(f'WARNING: leaving out all reactions involving {exclude_spcs}!!')
     for rxn_idx in range(num_rxns):
-        #if rxn_idx in hardcoded_rxn_idxs:
         current_rxn = gas.reactions()[rxn_idx].equation
         for exclude_spc in exclude_spcs:
             if exclude_spc in current_rxn:
