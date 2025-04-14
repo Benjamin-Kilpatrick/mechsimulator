@@ -7,7 +7,6 @@ from data.experiments.common.condition_set import ConditionSet
 from data.experiments.mixture import Mixture
 from data.experiments.mixture_type import MixtureType
 from data.experiments.results import Results
-from data.mixtures.compound import Compound
 
 
 class Experiment:

@@ -1,3 +1,4 @@
+import math
 from typing import Dict
 
 import pint
@@ -102,6 +103,11 @@ class UnitParser:
         """
         if value is None:
             return None
+        try:
+            if units == 'nan' or math.isnan(float(units)):
+                units = ''
+        except:
+            pass
         category: str
         for category in cls.UNIT_LOOKUP.keys():
             if units in cls.UNIT_LOOKUP[category]:
