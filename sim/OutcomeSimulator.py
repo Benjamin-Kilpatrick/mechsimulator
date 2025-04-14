@@ -104,6 +104,9 @@ class OutcomeSimulator(ReactionSimulator):
         percent_absorption = 100 * (1 - raw_transmission)
         return SimulatorUtils.interpolate(percent_absorption, times, experiment_set.get_time_x_data())
 
+    def get_pathway(self, end_gas):
+        return end_gas.TPX
+
     def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
         ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype='float')
         p_of_t = SimulatorUtils.generate_p_of_t(
@@ -173,9 +176,9 @@ class OutcomeSimulator(ReactionSimulator):
             )
 
             if experiment_set.calculation_type == CalculationType.PATHWAY:
-                ydata[exp_ndx] = end_gas.TPX
+                ydata[exp_ndx] = self.get_pathway(end_gas)
             elif experiment_set.measurement == Measurement.OUTLET:
-                ydata[exp_ndx] = concentrations[:, -1]  # Outlet just wants last entry
+                ydata[exp_ndx] = self.get_outlet(concentrations)
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
             exp_ndx += 1
@@ -210,9 +213,9 @@ class OutcomeSimulator(ReactionSimulator):
                 all_concentrations[exp_ndx, :] = previous_concentrations
 
             if experiment_set.calculation_type == CalculationType.PATHWAY:
-                ydata[exp_ndx] = end_gas.TPX
+                ydata[exp_ndx] = self.get_pathway(end_gas)
             elif experiment_set.measurement == Measurement.Outlet:
-                ydata[exp_ndx] = concentrations
+                ydata[exp_ndx] = concentrations  # Yes, this is intentional. It's a special case
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
@@ -252,7 +255,7 @@ class OutcomeSimulator(ReactionSimulator):
             )
 
             if experiment_set.calculation_type == CalculationType.PATHWAY:
-                ydata[exp_ndx] = end_gas.TPX
+                ydata[exp_ndx] = self.get_pathway(end_gas)
             elif experiment_set.measurement == Measurement.CONCENTRATION:
                 ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
             elif experiment_set.measurement == Measurement.OUTLET:
@@ -279,7 +282,7 @@ class OutcomeSimulator(ReactionSimulator):
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position
             new_solution_list.append(new_solution)
 
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
+            if experiment_set. :
                 SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
             elif experiment_set.measurement == Measurement.LAMINAR_FLAME_SPEED:
                 ydata[exp_ndx] = velocities[0] * 100
