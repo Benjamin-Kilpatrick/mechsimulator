@@ -21,7 +21,7 @@ class OutcomeSimulator(ReactionSimulator):
             experiment_set.condition_range.conditions.get(Condition.DPDT)
         )
         end_time = experiment_set.condition_range.conditions.get(Condition.END_TIME)
-        exp_ndx = 0
+        exp_ndx = 0 #todo-t: use this for single compound?
         for experiment in experiment_set.simulated_experiments:
             concentrations, pressures, temps, times = Reactors.st(
                 experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE),
@@ -87,6 +87,7 @@ class OutcomeSimulator(ReactionSimulator):
         dtype = 'object' if experiment_set.calculation_type == CalculationType.PATHWAY else 'float'
         ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype=dtype)
         exp_ndx = 0
+        #todo-t: rop not used?
         for experiment in experiment_set.generate_simulated_conditions():
             concentrations, times, positions, rop, end_gas = Reactors.pfr(
                 experiment.conditions.get(Condition.TEMPERATURE),
@@ -134,6 +135,7 @@ class OutcomeSimulator(ReactionSimulator):
                 experiment.conditions.get(Condition.VOLUME),
                 experiment.conditions.get(Condition.MDOT),
                 previous_concentrations=previous_concentrations
+                #todo-t: is ok?
             )
 
             if output_all:
@@ -206,7 +208,7 @@ class OutcomeSimulator(ReactionSimulator):
                 experiment.conditions.get(Condition.PRESSURE),
                 experiment.compounds, mechanism,
                 experiment_set.get_target_species(),
-                previous_solution603 = previous_solution
+                previous_solution = previous_solution
             )
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position
             new_solution_list.append(new_solution)

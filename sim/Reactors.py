@@ -13,30 +13,31 @@ from data.mixtures.compound import Compound
 class Reactors:
 
     @staticmethod
-    def st(temperature, pressure, mix, gas, targ_species, end_time, pres_vs_time=None):
+    def st(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_species, end_time, press_of_time=None):
         """
         Will run a shock tube simulation. The non-ideal pressure rise, dP/dt, and can be incorporated via an optional P(t) profile
         
-        :param temperature: 
-        :param pressure: 
-        :param mix: 
-        :param gas: 
-        :param targ_species: 
-        :param end_time: 
-        :param pres_vs_time: 
+        :param temp: the experiments condition temperature
+        :param pressure: the experiments condition temperature
+        :param mix: The Compound of gasses?
+        :param gas: The Cantera mechanism object
+        :param targ_species: a list of target species
+        :param end_time: float, end time for the simulation, will end at the first of either this time or the max time in press_of_time
+        :param press_of_time: numpy array of specified pressure vs time, set to None if no non-ideal effects are simulated.
         :return: 
         """
-        gas = Reactors.set_state(gas, temperature, pressure, mix)
+        #todo-t: specify the compound?
+        gas = Reactors.set_state(gas, temp, pressure, mix)
 
-        if pres_vs_time is None:
+        if press_of_time is None:
             # Create an array of ones spanning from t=0 to t=end_time
-            velocity_vs_time = np.array([[0, end_time], [1, 1]])
+            velocity_of_time = np.array([[0, end_time], [1, 1]])
         else:
             # Convert P(t) to V(t) assuming isentropic behavior
             gamma = gas.cp_mass / gas.cv_mass  # specific heat ratio
-            velocity_vs_time = np.zeros_like(pres_vs_time)
-            velocity_vs_time[0, :] = pres_vs_time[0, :]  # time values are the same
-            velocity_vs_time[1, :] = (pres_vs_time[1, :] / pres_vs_time[1, 0]) ** (-1 / gamma)
+            velocity_of_time = np.zeros_like(press_of_time)
+            velocity_of_time[0, :] = press_of_time[0, :]  # time values are the same
+            velocity_of_time[1, :] = (press_of_time[1, :] / press_of_time[1, 0]) ** (-1 / gamma)
     
         reaction = Cantera.IdealGasReactor(gas)
         reaction.volume = 1 # m^3 (default value, but here for clarity)
@@ -44,17 +45,18 @@ class Reactors:
         wall = Cantera.Wall(env, reaction)
         wall.area = 1  # m^2 (default value, but here for clarity)
         wall.heat_transfer_coeff = 0  # no heat transfer considerations for ST
+
         def wall_velocity(temp_time):
-            """ Gets the wall velocity at some time based on velocity_vs_time
+            """ Gets the wall velocity at some time based on velocity_of_time
 
                 :param temp_time: individual time value (s)
                 :type temp_time: float
                 :return vel: velocity of the wall (m/s)
                 :rtype: float
             """
-            dvdt = np.gradient(velocity_vs_time[1, :], velocity_vs_time[0, :])
+            dvdt = np.gradient(velocity_of_time[1, :], velocity_of_time[0, :])
             dxdt = dvdt / wall.area  # only for clarity (since A = 1 m^2)
-            vel = np.interp(temp_time, velocity_vs_time[0, :], -1 * dxdt)
+            vel = np.interp(temp_time, velocity_of_time[0, :], -1 * dxdt)
 
             return vel
         wall.set_velocity(wall_velocity)
@@ -64,7 +66,7 @@ class Reactors:
         time = 0
         states = Cantera.SolutionArray(gas, extra=['t'])
         states.append(reaction.thermo.state, t=time)
-        while time < np.min([end_time, velocity_vs_time[0, -1]]):
+        while time < np.min([end_time, velocity_of_time[0, -1]]):
             time = network.step()
             states.append(reaction.thermo.state, t=time)
 
@@ -79,21 +81,17 @@ class Reactors:
             else:
                 targ_concs[ndx, :] = np.nan
 
-        rop = None  # will develop later...
-        end_gas = gas
-
-        # todo-t: change to Object return
-        return targ_concs, pressures, temps, times, rop, end_gas
+        return targ_concs, pressures, temps, times
 
     # ---------------
 
     @staticmethod
-    def rcm(temp, pressure, mix: Compound, gas, targ_spcs, end_time, velocity_vs_time):
+    def rcm(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, end_time, velocity_of_time):
         gas = Reactors.set_state(gas, temp, pressure, mix)
 
         print('inside reactions, rcm temp: ', temp)
         # Normalize the volume profile by the first value
-        velocity_vs_time[1, :] = velocity_vs_time[1, :] / velocity_vs_time[1, 0]
+        velocity_of_time[1, :] = velocity_of_time[1, :] / velocity_of_time[1, 0]
 
         # Set up reactor, piston, and network
         reaction = Cantera.IdealGasReactor(gas)
@@ -105,20 +103,18 @@ class Reactors:
 
         @staticmethod
         def piston_velocity(temp_time):
-            dvdt = np.gradient(velocity_vs_time[1, :], velocity_vs_time[0, :])
+            dvdt = np.gradient(velocity_of_time[1, :], velocity_of_time[0, :])
             dxdt = dvdt / piston.area  # only for clarity (since area = 1 m^2)
-            vel = np.interp(temp_time, velocity_vs_time[0, :], -1 * dxdt)
+            vel = np.interp(temp_time, velocity_of_time[0, :], -1 * dxdt)
             return vel
-        
         piston.set_velocity(piston_velocity)
         network = Cantera.ReactorNet([reaction])
-        # network.set_max_time_step(np.max(np.diff(velocity_vs_time[0, :])))
 
         # Run the simulation
         time = 0
         states = Cantera.SolutionArray(gas, extra=['t'])
         states.append(reaction.thermo.state, t=time)
-        while time < np.min([end_time, velocity_vs_time[0, -1]]):
+        while time < np.min([end_time, velocity_of_time[0, -1]]):
             time = network.step()
             states.append(reaction.thermo.state, t=time)
 
@@ -126,18 +122,16 @@ class Reactors:
         times = states.t
         pressures = states.P
         targ_concs = np.zeros((len(targ_spcs), len(times)))
-        for idx, targ_spc in enumerate(targ_spcs):
-            targ_concs[idx, :] = states.X[:, gas.species_index(targ_spc)]
-        end_gas = gas
-        rop = None  # temporary
+        for ndx, targ_spc in enumerate(targ_spcs):
+            targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
 
-        return targ_concs, pressures, times, rop, end_gas
+        return targ_concs, pressures, times
             
 
     # ---------------
-
+    #todo-t: Change Quantity to condition? Again, mix List or single? how does list differ?
     @staticmethod
-    def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, mdot, area, length,res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
+    def pfr(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
         # Set the initial gas state
         if x_profile is not None:  # use T profile if given
             # Create the 2D array
@@ -154,7 +148,7 @@ class Reactors:
         # Create reactor and reactor network
         reac = Cantera.IdealGasConstPressureReactor(gas)
         network = Cantera.ReactorNet([reac])
-
+        
         # Approximate a time step
         density, _ = gas.DP  # kg/m^3
         if res_time is not None:  # if res_time was given instead of mdot
@@ -162,10 +156,52 @@ class Reactors:
         inlet_velocity = mdot / (density * area)  # m/s
         dt = (length / inlet_velocity) / n_steps  # s
 
+        # Initialize time, position, velocity, and thermo states
+        times = (np.arange(n_steps * 2) + 1) * dt  # longer than needed to be safe
+        positions = np.zeros_like(times)
+        velocities = np.zeros_like(times)
+        states = cantera.SolutionArray(reac.thermo)
+
+        # Loop over each timestep
+        end_ndx = len(times) - 1  # defining as backup; should be overwritten
+        for ndx, time in enumerate(times):
+            network.advance(time)  # perform time integration
+            velocities[ndx] = mdot / area / reac.thermo.density
+            positions[ndx] = positions[ndx - 1] + velocities[ndx] * dt  # transform
+            states.append(reac.thermo.state)
+
+            # If the reactor length has been exceeded, exit the for loop
+            if positions[ndx] >= length:
+                end_ndx = ndx
+                break
+
+            # If a T profile was given, update the temperature
+            if t_profile is not None:
+                new_temp = interp((positions[ndx], temp))  # use *given* T to get profile
+                thermo = reac.thermo
+                thermo.TPX = new_temp, thermo.TPX[1], thermo.TPX[2]
+                reac.insert(thermo)
+                network.reinitialize()
+
+        # Removed unused entries in time and position
+        times = times[:(end_ndx + 1)]
+        positions = positions[:(end_ndx + 1)]
+
+        # Get results for target species
+        targ_concs = np.full((len(targ_species), end_ndx + 1), np.nan)
+        for ndx, targ_spc in enumerate(targ_species):
+            if targ_spc is not None:
+                targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
+
+        end_gas = gas
+
+        return targ_concs, times, positions, end_gas
     # ---------------
 
     @staticmethod
-    def jsr(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, res_time, vol, prev_concs=None, mdot=None, max_iter=30000):
+    def jsr(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, res_time, vol, mdot=None, prev_concs=None):
+        #todo-t: took this out as the last param and made it a local variable
+        max_iter = 30000
 
         # Note: must set gas with mix before creating reservoirs!
         gas = Reactors.set_state(gas, temp, pressure, mix)
@@ -173,7 +209,7 @@ class Reactors:
         exhaust = Cantera.Reservoir(gas)
 
         # Create reactor, using prev_concs to speed up convergence
-        prev_concs_input = True # todo-t: use compound?
+        prev_concs_input = True
         if prev_concs is None:
             prev_concs_input = False
             prev_concs = mix
@@ -217,14 +253,13 @@ class Reactors:
                 else:  # if the targ_spc isn't in the mechanism
                     targ_concs[targ_ndx] = None
         end_gas = gas
-        rop = None
 
-        return targ_concs, all_concs, rop, end_gas
+        return targ_concs, all_concs, end_gas
 
     # ---------------
 
     @staticmethod
-    def const_t_p(temp: Quantity, pressure:Quantity, mix, gas, targ_spcs, end_time):
+    def const_t_p(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, end_time):
         gas = Reactors.set_state(gas, temp, pressure, mix)
 
         # Setting energy to 'off' holds T constant
@@ -251,23 +286,22 @@ class Reactors:
             else:
                 targ_concs[targ_ndx, :] = np.nan
 
-        rop = None  # will develop later... ???
         end_gas = gas
 
-        return targ_concs, pressures, temps, times, rop, end_gas
+        return targ_concs, pressures, temps, times, end_gas
 
     # ---------------
 
     @staticmethod
-    def free_flame(temp, pressure, mix, gas, targ_spcs, prev_soln=None):
+    def free_flame(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, previous_solution=None):
 
         # initialize the data from Cantera
         gas = Reactors.set_state(gas, temp, pressure, mix)
         loglevel = 0 # TODO-t:what is the purpose of supressing output here?
         flame: cantera.FreeFlame = Cantera.FreeFlame(gas) # cantera returns a result here from this input
         flame.transport_model = 'Mix'
-        if prev_soln is not None:
-            flame.set_profile('T', prev_soln[0, :], prev_soln[1, :])
+        if previous_solution is not None:
+            flame.set_profile('T', previous_solution[0, :], previous_solution[1, :])
         # Run a simulation
         try:
             flame.solve(loglevel=loglevel, auto=True)
@@ -289,14 +323,12 @@ class Reactors:
         pos = flame.grid
         vels = flame.velocity
         temps = flame.T
-        rop = None  # not sure what to do here
-        end_gas = None  # will develop later
 
-        return targ_concs, pos, vels, temps, rop, end_gas
+        return targ_concs, pos, vels, temps
 
     # ---------------
     @staticmethod
-    def set_state(gas, temp: Quantity, pressure: Quantity, mix: Compound):
+    def set_state(gas, temp: Quantity, pressure: Quantity, mix: List[Compound]):
         #todo-t: do last after prev mix fixes
         pressure = pressure.to('pascal')
         """ come replace these dict methods once mix is no longer a dict
@@ -305,6 +337,9 @@ class Reactors:
             fuel_count = len(mix['fuel'])"""
         # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
         # TODO-t: come back when you know what mix is
+        if 0 == 0 :
+            pass
+
         if isinstance(mix, dict) and 'fuel' in mix:  # If there is a mixture defined using phi
             # Create string for fuel species
             fuel = ''
