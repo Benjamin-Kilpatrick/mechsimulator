@@ -1,11 +1,12 @@
-from typing import List
+from typing import List, Dict
 
 from pint import Quantity
 
 from data.experiments.common.condition import Condition
 from data.experiments.common.condition_set import ConditionSet
+from data.experiments.mixture import Mixture
+from data.experiments.mixture_type import MixtureType
 from data.experiments.results import Results
-from data.mixtures.compound import Compound
 
 
 class Experiment:
@@ -15,7 +16,7 @@ class Experiment:
 
     def __init__(self,
                  conditions: ConditionSet,
-                 compounds: List[Compound],
+                 mixtures: Dict[MixtureType, Mixture],
                  results: Results):
         """
         Constructor
@@ -24,21 +25,18 @@ class Experiment:
         :param results: Measured results (may be empty for simulated experiments)
         """
         self.conditions: ConditionSet = conditions
-        self.compounds: List[Compound] = compounds
+        self.mixtures: Dict[MixtureType, Mixture] = mixtures
         self.results: Results = results
 
     def __repr__(self) -> str:
         out = f"<Experiment variables:{self.variables}>"
-        for compound in self.compounds:
-            out += f"\n\t{compound}"
+        for species, quantity in self.mixtures.species:
+            out += f"\n\t{species.name} {quantity}"
+        if self.mixtures.balanced is not None:
+            out += f"\n\t{self.mixtures.balanced.name} balanced"
         return out
 
-    def get_compounds(self) -> List[Compound]:
-        """
-        Get the list of compound mixtures
-        :return: a list of compound mixtures
-        """
-        return self.compounds
+
 
     def get_results(self) -> Results:
         """
@@ -62,3 +60,8 @@ class Experiment:
         :return: the value of the condition
         """
         return self.conditions.get(condition)
+
+    def get_mixture(self, mixture_type: MixtureType) -> Mixture:
+        if mixture_type in self.mixtures:
+            return self.mixtures[mixture_type]
+        raise Exception(f'{mixture_type.name} not found')

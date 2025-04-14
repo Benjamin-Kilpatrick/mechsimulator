@@ -7,7 +7,6 @@ from data.experiments.common.condition import Condition
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
 from serial.common.utils import Utils
 
 
@@ -42,21 +41,21 @@ class ExperimentWriter:
                     'end': f"{experiment_set.condition_range.end:D}",
                     'inc': f"{experiment_set.condition_range.inc:D}"
                 },
-                'variables': []
+                'conditions': []
             },
             'species': [],
-            'compounds': [],
+            'mixture': [],
             'measured_experiments': []
         }
 
-        variable: Condition
-        for variable in experiment_set.condition_range.get_conditions():
-            value = experiment_set.condition_range.get(variable)
+        condition: Condition
+        for condition in experiment_set.condition_range.get_conditions():
+            value = experiment_set.condition_range.get(condition)
             if isinstance(value, numpy.ndarray):
                 value = value.tolist()
-            output_dict['simulation_conditions']['variables'].append(
+            output_dict['simulation_conditions']['conditions'].append(
                 {
-                    'name': variable.name,
+                    'name': condition.name,
                     'value': Utils.convert_quantity_to_str(value)
                 }
             )
@@ -74,56 +73,66 @@ class ExperimentWriter:
                 }
             )
 
-        compound: Compound
-        for compound in experiment_set.simulated_compounds:
-            output_dict['compounds'].append(
-                {
-                    'name': compound.species.name,
-                    'concentration':
-                        {
-                            'value': compound.concentration.value,
-                            'lower_bound': compound.concentration.lower_bound,
-                            'upper_bound': compound.concentration.upper_bound
-                        },
-                    'is_balanced': compound.is_balanced
+        species: Species
+        for species, quantity in experiment_set.simulated_mixture.species:
+            output_dict['mixture'].append({
+                    'name': species.name,
+                    'concentration': {
+                            'value': quantity,
+                            'lower_bound': None,
+                            'upper_bound': None
+                        }
+                }
+            )
+        if experiment_set.simulated_mixture.balanced is not None:
+            output_dict['mixture'].append({
+                    'name': experiment_set.simulated_mixture.balanced.name,
+                    'concentration': {
+                        'value': 'bal'
+                    }
                 }
             )
 
         experiment: Experiment
         for experiment in experiment_set.measured_experiments:
             experiment_dict = {
-                'variables': [],
-                'compounds': [],
+                'conditions': [],
+                'mixture': [],
                 'results': {
-                    'variables': {},
+                    'conditions': {},
                     'targets': {}
                 }
             }
 
-            for variable in experiment.conditions.get_conditions():
-                experiment_dict['variables'].append(
+            for condition in experiment.conditions.get_conditions():
+                experiment_dict['conditions'].append(
                     {
-                        'name': variable.name,
-                        'value': Utils.convert_quantity_to_str(experiment.conditions.get(variable))
+                        'name': condition.name,
+                        'value': Utils.convert_quantity_to_str(experiment.conditions.get(condition))
                     }
                 )
 
-            for compound in experiment.compounds:
-                experiment_dict['compounds'].append(
-                    {
-                        'name': compound.species.name,
-                        'concentration':
-                            {
-                                'value': compound.concentration.value,
-                                'lower_bound': compound.concentration.lower_bound,
-                                'upper_bound': compound.concentration.upper_bound
-                            },
-                        'is_balanced': compound.is_balanced
+            for species, quantity in experiment.mixtures.species:
+                experiment_dict['mixture'].append({
+                        'name': species.name,
+                        'concentration': {
+                                'value': quantity,
+                                'lower_bound': None,
+                                'upper_bound': None
+                            }
+                    }
+                )
+            if experiment.mixtures.balanced is not None:
+                experiment_dict['mixture'].append({
+                        'name': experiment.mixtures.balanced.name,
+                        'concentration': {
+                            'value': 'bal'
+                        }
                     }
                 )
 
-            for variable in experiment.results.get_variables():
-                experiment_dict['results']['variables'][variable.name] = Utils.convert_quantity_to_str(experiment.results.get_variable(variable))
+            for condition in experiment.results.get_variables():
+                experiment_dict['results']['conditions'][condition.name] = Utils.convert_quantity_to_str(experiment.results.get_variable(condition))
 
             for target in experiment.results.get_targets():
                 experiment_dict['results']['targets'][target] = Utils.convert_quantity_to_str(experiment.results.get_target(target))

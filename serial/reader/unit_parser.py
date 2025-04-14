@@ -1,3 +1,4 @@
+import math
 from typing import Dict
 
 import pint
@@ -31,7 +32,8 @@ class UnitParser:
         'concentration': {
             'ppm': _ureg.Quantity(1,'ppm'),
             '%': _ureg.Quantity(1,'%'),
-            'molec/cm3': _ureg.Quantity(1, 'mole/cm^3')
+            'molec/cm3': _ureg.Quantity(1, 'mole/cm^3'),
+            'X': _ureg.Quantity(1, '')
         },
         'length': {
             'm': _ureg.Quantity(1, 'meter'),
@@ -101,6 +103,11 @@ class UnitParser:
         """
         if value is None:
             return None
+        try:
+            if units == 'nan' or math.isnan(float(units)):
+                units = ''
+        except:
+            pass
         category: str
         for category in cls.UNIT_LOOKUP.keys():
             if units in cls.UNIT_LOOKUP[category]:
