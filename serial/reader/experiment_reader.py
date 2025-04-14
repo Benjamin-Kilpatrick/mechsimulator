@@ -17,11 +17,11 @@ from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
 from data.experiments.mixture import Mixture
+from data.experiments.mixture_type import MixtureType
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
 from data.experiments.target_species import TargetSpecies
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
 from serial.common.env_path import EnvPath
 from serial.common.file_type import FileType
 from serial.common.utils import Utils
@@ -168,8 +168,8 @@ class ExperimentReader:
 
         # species and compounds parsed from experiment sheet
         simulated_species: List[Species] = ExperimentReader.parse_species_excel(info_dict['spc'])
-        simulated_mixture: Mixture = ExperimentReader.parse_compounds_excel(info_dict['mix'],
-                                                                                     simulated_species)
+        simulated_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(info_dict['mix'],
+                                                                           simulated_species)
 
         measured_experiments: List[Experiment] = []
 
@@ -187,7 +187,7 @@ class ExperimentReader:
 
             # conditions and compounds
             exp_conditions: ConditionSet = ExperimentReader.read_all_conditions_excel(exp_dict['conds'])
-            exp_mixture: Mixture = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
+            exp_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(exp_dict['mix'], simulated_species)
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
                 result_dict = exp_dict['result'][result_name]
@@ -286,31 +286,52 @@ class ExperimentReader:
         return species
 
     @staticmethod
-    def parse_compounds_excel(data: Dict[str, Any], species: List[Species]) -> Mixture:
+    def parse_mixtures_excel(data: Dict[str, Any], species: List[Species]) -> Dict[MixtureType, Mixture]:
         """
         Parse compound data
         :param data: dictionary of mixtures from the info sheet
         :param species: list of all species
-        :return: list of compounds
+        :return: dictionary of mixtures
         """
+        mixtures: Dict[MixtureType, Mixture] = {}
 
-        mixture: Mixture = Mixture()
+        if 'fuel' in data:
+            mixtures[MixtureType.FUEL_MIXTURE] = Mixture()
+            mixtures[MixtureType.OXIDIZER_MIXTURE] = Mixture()
+            fuels: List[str] = [item.strip() for item in data['fuel']['value'].split(',')]
+            fuels_ratios: List[float] = [1.0]
+            oxidizers: List[str] = [item.strip() for item in data['oxid']['value'].split(',')]
+            oxidizer_ratios: List[float] = [float(item.strip()) for item in data['oxid_ratios']['value'].split(',')]
 
-        spc: Species
-        for spc in species:
-            if spc.name in data:
-                mix_dict: Dict[str, Any] = data[spc.name]
-                mixture_quantity = mix_dict['value']
-                mixture_units = mix_dict['units']
+            if len(fuels) > 1:
+                fuels_ratios = [float(item.strip()) for item in data['fuel_ratios']['value'].split(',')]
 
-                # TODO take bounds into account
+            for i in range(len(fuels)):
+                spc: Species = list(filter(lambda s: fuels[i] == s.name, species))[0]
+                mixtures[MixtureType.FUEL_MIXTURE].add_species(spc, fuels_ratios[i])
 
-                if mixture_quantity == 'bal':
-                    mixture.add_balanced_species(spc)
-                else:
-                    mixture.add_species(spc, UnitParser.parse('concentration', mixture_quantity, mixture_units))
+            for i in range(len(oxidizers)):
+                spc: Species = list(filter(lambda s: oxidizers[i] == s.name, species))[0]
+                mixtures[MixtureType.OXIDIZER_MIXTURE].add_species(spc, oxidizer_ratios[i])
 
-        return mixture
+        else:
+            mixtures[MixtureType.GAS_MIXTURE] = Mixture()
+            spc: Species
+            for spc in species:
+                if spc.name in data:
+                    mix_dict: Dict[str, Any] = data[spc.name]
+                    mixture_quantity = mix_dict['value']
+                    mixture_units = mix_dict['units']
+
+                    # TODO take bounds into account
+
+                    if mixture_quantity == 'bal':
+                        mixtures[MixtureType.GAS_MIXTURE].add_balanced_species(spc)
+                    else:
+                        mixtures[MixtureType.GAS_MIXTURE].add_species(spc, UnitParser.parse('concentration', mixture_quantity, mixture_units))
+
+
+        return mixtures
 
     @staticmethod
     def get_variable_excel(condition: Condition, data: Dict[str, Any], require: bool) -> Tuple[Any, float]:

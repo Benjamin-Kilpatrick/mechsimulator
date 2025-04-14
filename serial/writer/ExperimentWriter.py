@@ -7,7 +7,6 @@ from data.experiments.common.condition import Condition
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
 from serial.common.utils import Utils
 
 
