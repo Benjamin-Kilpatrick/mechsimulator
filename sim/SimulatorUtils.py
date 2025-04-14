@@ -83,7 +83,7 @@ class SimulatorUtils:
     @staticmethod
     def generate_ydata_shape(experiment_set: ExperimentSet, mechanism: Mechanism) -> Tuple:
         # Conditions length
-        shape: List[int] = [len(experiment_set.get_conditions())]
+        shape: List[int] = [len(experiment_set.generate_conditions())]
         if experiment_set.calculation_type == CalculationType.PATHWAY:
             return tuple(shape)
 

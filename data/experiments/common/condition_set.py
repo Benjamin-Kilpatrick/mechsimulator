@@ -35,13 +35,13 @@ class ConditionSet:
         """
         return self.condition_set[variable]
 
-    def has(self, variable: Condition) -> bool:
+    def has(self, condition: Condition) -> bool:
         """
         Check if a variable has been set
-        :param variable: the type of variable
+        :param condition: the type of variable
         :return: True if the variable has been set, False otherwise
         """
-        return variable in self.condition_set.keys()
+        return condition in self.condition_set.keys()
 
     def clone(self) -> Self:
         """

@@ -17,7 +17,7 @@ class Simulator:
         if experiment_set.calculation_type == CalculationType.OUTCOME or experiment_set.calculation_type == CalculationType.PATHWAY:
             Simulator.outcome_simulator.simulate_experiment_set(experiment_set, mechanism)
         elif experiment_set.calculation_type == CalculationType.SENSITIVITY:
-            Simulator.sensitivity_simulator.simulate_experiment_set(experiment_set, mechanism)
+            return Simulator.sensitivity_simulator.simulate_experiment_set(experiment_set, mechanism)
         else:
             raise NotImplementedError(f"{experiment_set.calculation_type} does not have a simulator associated with "
                                       f"it yet.")

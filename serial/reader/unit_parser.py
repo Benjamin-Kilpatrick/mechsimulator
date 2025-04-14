@@ -31,7 +31,8 @@ class UnitParser:
         'concentration': {
             'ppm': _ureg.Quantity(1,'ppm'),
             '%': _ureg.Quantity(1,'%'),
-            'molec/cm3': _ureg.Quantity(1, 'mole/cm^3')
+            'molec/cm3': _ureg.Quantity(1, 'mole/cm^3'),
+            'X': _ureg.Quantity(1, '')
         },
         'length': {
             'm': _ureg.Quantity(1, 'meter'),

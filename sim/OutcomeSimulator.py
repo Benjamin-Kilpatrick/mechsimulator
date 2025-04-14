@@ -24,10 +24,10 @@ class OutcomeSimulator(ReactionSimulator):
         )
         end_time = experiment_set.condition_range.conditions.get(Condition.END_TIME)
         exp_ndx = 0
-        for experiment in experiment_set.get_conditions():
+        for experiment in experiment_set.all_simulated_experiments:
             concentrations, pressures, temps, times = Reactors.st(
                 experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
+                experiment.mixtures, mechanism,
                 experiment_set.get_target_species(), end_time, p_of_t
             )
 
@@ -93,7 +93,7 @@ class OutcomeSimulator(ReactionSimulator):
             concentrations, times, positions, rop, end_gas = Reactors.pfr(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
+                experiment.mixtures, mechanism,
                 experiment_set.get_target_species(),
                 experiment.conditions.get(Condition.MDOT),
                 experiment.conditions.get(Condition.AREA),
@@ -130,7 +130,7 @@ class OutcomeSimulator(ReactionSimulator):
             concentrations, previous_concentrations, end_gas = Reactors.jsr(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
+                experiment.mixtures, mechanism,
                 experiment_set.get_target_species(),
                 experiment.conditions.get(Condition.RES_TIME),
                 experiment.conditions.get(Condition.VOLUME),
@@ -156,7 +156,7 @@ class OutcomeSimulator(ReactionSimulator):
             concentrations, pressures, times = Reactors.rcm(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
+                experiment.mixtures, mechanism,
                 experiment_set.get_target_species(),
                 experiment.conditions.get(Condition.END_TIME),
                 experiment.conditions.get(Condition.V_OF_T)
@@ -177,7 +177,7 @@ class OutcomeSimulator(ReactionSimulator):
             concentrations, pressures, temps, times, end_gas = Reactors.const_t_p(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds,
+                experiment.mixtures,
                 mechanism,
                 experiment_set.get_target_species(),
                 experiment.conditions.get(Condition.END_TIME)
@@ -188,7 +188,7 @@ class OutcomeSimulator(ReactionSimulator):
             elif experiment_set.measurement == Measurement.CONCENTRATION:
                 ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
             elif experiment_set.measurement == Measurement.OUTLET:
-                ydata = SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
+                ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)]))[:, -1]
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
@@ -204,7 +204,7 @@ class OutcomeSimulator(ReactionSimulator):
             concentrations, positions, velocities, temps, rop, end_gas = Reactors.free_flame(
                 experiment.conditions.get(Condition.TEMPERATURE),
                 experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
+                experiment.mixtures, mechanism,
                 experiment_set.get_target_species(),
                 previous_solution = previous_solution
             )
