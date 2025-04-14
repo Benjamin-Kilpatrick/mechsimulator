@@ -1,9 +1,11 @@
+import os
 from abc import ABC, abstractmethod
 from typing import List, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter as Formatter
+import matplotlib.backends.backend_pdf as plt_pdf
 #from rdkit.Contrib.LEF.AddLabels import labels
 
 from data.experiments.common.calculation_type import CalculationType
@@ -120,7 +122,7 @@ class PlotterLine(ABC):
         pass
 
     @abstractmethod
-    def get_label(self):
+    def get_label(self) -> str:
         pass
 
     @abstractmethod
@@ -132,7 +134,7 @@ class PlotterLine(ABC):
         pass
 
     @abstractmethod
-    def get_marker(self):
+    def get_marker(self) -> float:
         pass
 
     @abstractmethod
@@ -169,13 +171,13 @@ class MeasuredConditionLine(PlotterLine):
         return "-"
 
     def get_marker(self):
-        return "#"
+        return 1.0
 
     def get_zorder(self):
         return None
 
     def get_xdata(self):
-        return self.experiment_set.get_x_data()
+        return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
 
     def get_ydata(self) -> np.ndarray:
         data = [experiment.get(self.condition).magnitude for experiment in self.experiment_set.measured_experiments]
@@ -224,16 +226,24 @@ class Plot:
         for experiment_set in job.experiment_files:
             self.figures.append(PlotterFigure(experiment_set))
 
-    def plot(self):
+    def plot(self, filename, path):
         for figure in self.figures:
             figure.plot()
+
+        print('Producing PDF...')
+        if path is not None:
+            filename = os.path.join(path, filename)
+        pdf = plt_pdf.PdfPages(filename)
+        for fig in self.figures:  # don't need the axes
+            pdf.savefig(fig.fig)
+        pdf.close()
 
 
 class Plotter:
     @staticmethod
     def plot(job: Job, filename: str = 'output.pdf', output_path: str = None):
         plot = Plot(job)
-        plot.plot()
+        plot.plot(filename, output_path)
 
 
 
@@ -374,7 +384,7 @@ class PlotterOld:
                 xlabel = f'Time ({xunit})'
             else:
                 xlabel = 'Time (s)'
-            xquant = Variable.TIME
+            xquant = Condition.TIME
 
         elif meas_type in (Measurement.IGNITION_DELAY_TIME,
                            Measurement.OUTLET,
@@ -395,7 +405,7 @@ class PlotterOld:
                 xunit = VARIABLE_UNITS[plot_var]  # the default unit is the first one
 
             # If on ignition delay time and using temperature, use the special label
-            if meas_type == Measurement.IGNITION_DELAY_TIME and plot_var == Variable.TEMPERATURE:
+            if meas_type == Measurement.IGNITION_DELAY_TIME and plot_var == Condition.TEMPERATURE:
                 xlabel = '1000/Temperature (K^-1)'
             else:
                 xlabel = f'{VARIABLE_DISPLAY_NAMES[plot_var]} ({xunit})'
@@ -610,7 +620,7 @@ class PlotterOld:
                 f"'{units}' are not allowed units for the quantity '{quant}'")
             idx = allowed_units.index(units)
             conv_factor = 1 / conv_factors[idx]  # conv_factor is the inverse
-        elif units in Variable:
+        elif units in Condition:
             allowed_units = VARIABLE_UNITS[quant][0]
             conv_factors = VARIABLE_UNITS[quant][1]
             assert units in allowed_units, (
