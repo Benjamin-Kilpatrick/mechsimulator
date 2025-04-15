@@ -2,9 +2,12 @@ import cantera
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 import cantera as Cantera
-from typing import List
+from typing import List, Dict
 from pint import Quantity
-from data.mixtures.compound import Compound
+
+from data.experiments.mixture import Mixture
+from data.experiments.mixture_type import MixtureType
+
 
 # used ---- to split functions for my own view for now, so i know where functions are that were inside of other functions
 
@@ -13,20 +16,21 @@ from data.mixtures.compound import Compound
 class Reactors:
 
     @staticmethod
-    def st(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_species, end_time, press_of_time=None):
+    def st(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time, press_of_time=None):
         """
         Will run a shock tube simulation. The non-ideal pressure rise, dP/dt, and can be incorporated via an optional P(t) profile
         
         :param temp: the experiments condition temperature
         :param pressure: the experiments condition temperature
-        :param mix: The Compound of gasses?
+        :param mix: The Mixture of gasses?
         :param gas: The Cantera mechanism object
         :param targ_species: a list of target species
         :param end_time: float, end time for the simulation, will end at the first of either this time or the max time in press_of_time
         :param press_of_time: numpy array of specified pressure vs time, set to None if no non-ideal effects are simulated.
         :return: 
         """
-        #todo-t: specify the compound?
+        #todo-t: specify the Mixture?
+        temp = temp()
         gas = Reactors.set_state(gas, temp, pressure, mix)
 
         if press_of_time is None:
@@ -56,6 +60,7 @@ class Reactors:
             """
             dvdt = np.gradient(velocity_of_time[1, :], velocity_of_time[0, :])
             dxdt = dvdt / wall.area  # only for clarity (since A = 1 m^2)
+            #todo-t: do I do quantity?
             vel = np.interp(temp_time, velocity_of_time[0, :], -1 * dxdt)
 
             return vel
@@ -86,7 +91,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def rcm(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, end_time, velocity_of_time):
+    def rcm(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, end_time, velocity_of_time):
         gas = Reactors.set_state(gas, temp, pressure, mix)
 
         print('inside reactions, rcm temp: ', temp)
@@ -131,7 +136,7 @@ class Reactors:
     # ---------------
     #todo-t: Change Quantity to condition? Again, mix List or single? how does list differ?
     @staticmethod
-    def pfr(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
+    def pfr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
         # Set the initial gas state
         if x_profile is not None:  # use T profile if given
             # Create the 2D array
@@ -199,7 +204,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def jsr(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, res_time, vol, mdot=None, prev_concs=None):
+    def jsr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, res_time, vol, mdot=None, prev_concs=None):
         #todo-t: took this out as the last param and made it a local variable
         max_iter = 30000
 
@@ -259,7 +264,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def const_t_p(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, end_time):
+    def const_t_p(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, end_time):
         gas = Reactors.set_state(gas, temp, pressure, mix)
 
         # Setting energy to 'off' holds T constant
@@ -293,7 +298,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def free_flame(temp: Quantity, pressure: Quantity, mix, gas, targ_spcs, previous_solution=None):
+    def free_flame(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, previous_solution=None):
 
         # initialize the data from Cantera
         gas = Reactors.set_state(gas, temp, pressure, mix)
@@ -328,16 +333,14 @@ class Reactors:
 
     # ---------------
     @staticmethod
-    def set_state(gas, temp: Quantity, pressure: Quantity, mix: List[Compound]):
-        #todo-t: do last after prev mix fixes
+    def set_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
+        #todo-t: delete conv?
         pressure = pressure.to('pascal')
-        """ come replace these dict methods once mix is no longer a dict
-        if isinstance(mix, List) and ('fuel' in mix):
-            fuel = ''
-            fuel_count = len(mix['fuel'])"""
+
+
         # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
         # TODO-t: come back when you know what mix is
-        if 0 == 0 :
+        if 0 == 0:
             pass
 
         if isinstance(mix, dict) and 'fuel' in mix:  # If there is a mixture defined using phi
