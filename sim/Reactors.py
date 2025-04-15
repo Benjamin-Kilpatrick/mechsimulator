@@ -204,7 +204,11 @@ class Reactors:
     # ---------------
 
     @staticmethod
+<<<<<<< HEAD
     def jsr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, res_time, vol, mdot=None, prev_concs=None):
+=======
+    def jsr(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, res_time, vol, mdot=None, previous_concentrations=None):
+>>>>>>> 4ff4f5d8826aad7a8051c03a6b01dcaa0d05b0a9
         #todo-t: took this out as the last param and made it a local variable
         max_iter = 30000
 
@@ -215,10 +219,10 @@ class Reactors:
 
         # Create reactor, using prev_concs to speed up convergence
         prev_concs_input = True
-        if prev_concs is None:
+        if previous_concentrations is None:
             prev_concs_input = False
-            prev_concs = mix
-        gas = Reactors.set_state(gas, temp, pressure, prev_concs)
+            previous_concentrations = mix
+        gas = Reactors.set_state(gas, temp, pressure, previous_concentrations)
         reac = Cantera.IdealGasReactor(gas, energy='off', volume=vol)
 
         # Set up devices
@@ -245,7 +249,7 @@ class Reactors:
                 all_concs = None
             # If an initial guess was input, return it for use in the next iteration
             else:
-                all_concs = prev_concs
+                all_concs = previous_concentrations
 
         # Get results for target species
         targ_concs = np.zeros(len(targ_spcs))

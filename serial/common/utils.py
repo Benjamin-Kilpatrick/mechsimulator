@@ -97,7 +97,7 @@ class Utils:
         if measurement_type == 'conc':
             return Measurement.CONCENTRATION
         if measurement_type == 'lfs':
-            return Measurement.LFS
+            return Measurement.LAMINAR_FLAME_SPEED
         if measurement_type == 'half_life':
             return Measurement.HALF_LIFE
         raise SyntaxError(f"Invalid measurement type: {measurement_type}")
