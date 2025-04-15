@@ -17,8 +17,8 @@ from sim.SimulatorUtils import SimulatorUtils
 
 
 class OutcomeSimulator(ReactionSimulator):
-    def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        for experiment in experiment_set.all_simulated_experiments[0]:
+    def shock_tube(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
+        for experiment in experiments:
             concentrations, pressures, temps, times = Reactors.st(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment_set.condition_range.conditions.get(Condition.END_TIME),
@@ -57,14 +57,14 @@ class OutcomeSimulator(ReactionSimulator):
 
             elif experiment_set.measurement == Measurement.OUTLET:
                 # Get the y value AT end time
-                data = self.get_outlet(SimulatorUtils.interpolate(concentrations, times, numpy.array([end_time])))
+                data = self.get_outlet(SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment_set.condition_range.conditions.get(Condition.END_TIME)])))
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
 
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-    def plug_flow_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        for experiment in experiment_set.all_simulated_experiments[0]:
+    def plug_flow_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
+        for experiment in experiments:
             concentrations, times, positions, end_gas = Reactors.pfr(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.MDOT),
@@ -85,18 +85,18 @@ class OutcomeSimulator(ReactionSimulator):
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-    def jet_stream_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions=None,
+    def jet_stream_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions=None,
                            output_all=False):
         # Make sure that the prev_soln array is the right size (if given)
         num_conditions = len(experiment_set.all_simulated_experiments[0])
         if previous_solutions is not None:
             prev_solns_shape = np.shape(previous_solutions)
-            assert prev_solns_shape[0] == num_conditions  # TODO: What about sens?
+            assert prev_solns_shape[0] == num_conditions
             assert prev_solns_shape[1] == mechanism.solution.n_species  # Num targets?
 
         all_concentrations = np.ndarray((num_conditions, mechanism.solution.n_species))
 
-        for exp_ndx, experiment in enumerate(experiment_set.all_simulated_experiments[0]):
+        for exp_ndx, experiment in enumerate(experiments):
             concentrations, previous_concentrations, end_gas = Reactors.jsr(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.RES_TIME),
@@ -119,8 +119,8 @@ class OutcomeSimulator(ReactionSimulator):
 
         return all_concentrations
 
-    def rapid_compression_machine(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        for experiment in experiment_set.all_simulated_experiments[0]:
+    def rapid_compression_machine(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
+        for experiment in experiments:
             concentrations, pressures, times = Reactors.rcm(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.END_TIME),
@@ -130,13 +130,13 @@ class OutcomeSimulator(ReactionSimulator):
             if experiment_set.calculation_type == CalculationType.PATHWAY:
                 SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
             elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                data = SimulatorUtils.calculate_idt(experiment_set, times, pressures, concentrations)
+                data = self.calculate_idt(experiment_set, times, pressures, concentrations)
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-    def const_t_p(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        for experiment in experiment_set.all_simulated_experiments[0]:
+    def const_t_p(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
+        for experiment in experiments:
             concentrations, pressures, temps, times, end_gas = Reactors.const_t_p(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.END_TIME)
@@ -155,10 +155,10 @@ class OutcomeSimulator(ReactionSimulator):
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-    def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions: List = None):
+    def free_flame(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions: List = None):
         new_solution_list = []
 
-        for exp_ndx, experiment in enumerate(experiment_set.all_simulated_experiments[0]):
+        for exp_ndx, experiment in enumerate(experiments):
             if previous_solutions is not None:
                 previous_solution = previous_solutions[exp_ndx]
             else:
