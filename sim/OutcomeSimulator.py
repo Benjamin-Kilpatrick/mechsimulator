@@ -10,28 +10,188 @@ from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.mechanism.mechanism import Mechanism
+from data.mechanism.species import Species
 from sim.ReactionSimulator import ReactionSimulator
 from sim.Reactors import Reactors
 from sim.SimulatorUtils import SimulatorUtils
 
 
 class OutcomeSimulator(ReactionSimulator):
-    def calculate_idt(self, experiment_set: ExperimentSet, times, pressures, concentrations):  # TODO: Resolve pressure
-        """ Gets the ignition delay time for a shock-tube simulation. Can determine
-            IDT using one of three methods.
+    def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
+        for experiment in experiment_set.all_simulated_experiments[0]:
+            concentrations, pressures, temps, times = Reactors.st(
+                *self.get_basic_args(experiment_set, experiment, mechanism),
+                experiment_set.condition_range.conditions.get(Condition.END_TIME),
+                SimulatorUtils.generate_p_of_t(
+                    experiment_set.condition_range.conditions.get(Condition.END_TIME),
+                    experiment_set.condition_range.conditions.get(Condition.DPDT)
+                )
+            )
 
-            :param target_profile: the target concentration used to determine IDT
-            :param times: the time values corresponding to target
-            :param method: the method by which to determine the IDT; options are as
-                follows:
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+
+            elif experiment_set.measurement == Measurement.CONCENTRATION:
+                # interpolate raw concentrations to fit uniform times
+                concentrations = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
+                T_of_t = SimulatorUtils.interpolate(temps, times, experiment_set.get_time_x_data())
+                data = numpy.append(concentrations, T_of_t[numpy.newaxis, :], axis=0)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+
+            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
+                data = self.calculate_idt(experiment_set, times, pressures, concentrations)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+
+            elif experiment_set.measurement == Measurement.HALF_LIFE:  # TODO: Currently assumes only one target
+                half_value = concentrations[0][0] / 2
+                index = numpy.abs(concentrations[0] - half_value).argmin()
+                data = times[index]
+                # NaN if half value not reached
+                if half_value < numpy.min(concentrations[0]):
+                    data = numpy.nan
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+
+            elif experiment_set.measurement == Measurement.ABSORPTION:
+                data = self.calculate_absorption(experiment_set, experiment, concentrations, times)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+
+            elif experiment_set.measurement == Measurement.OUTLET:
+                # Get the y value AT end time
+                data = self.get_outlet(SimulatorUtils.interpolate(concentrations, times, numpy.array([end_time])))
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+
+            else:
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+    def plug_flow_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):
+        for experiment in experiment_set.all_simulated_experiments[0]:
+            concentrations, times, positions, end_gas = Reactors.pfr(
+                *self.get_basic_args(experiment_set, experiment, mechanism),
+                experiment.conditions.get(Condition.MDOT),
+                experiment.conditions.get(Condition.AREA),
+                experiment.conditions.get(Condition.LENGTH),
+                experiment.conditions.get(Condition.RES_TIME),
+                experiment.conditions.get(Condition.X_PROFILE),
+                experiment.conditions.get(Condition.TIME_PROFILE),
+                experiment.conditions.get(Condition.TIME_PROFILE_SETPOINTS)
+            )
+
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                data = self.get_pathway(end_gas)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            elif experiment_set.measurement == Measurement.OUTLET:
+                data = self.get_outlet(concentrations)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            else:
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+    def jet_stream_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions=None,
+                           output_all=False):
+        # Make sure that the prev_soln array is the right size (if given)
+        num_conditions = len(experiment_set.all_simulated_experiments[0])
+        if previous_solutions is not None:
+            prev_solns_shape = np.shape(previous_solutions)
+            assert prev_solns_shape[0] == num_conditions  # TODO: What about sens?
+            assert prev_solns_shape[1] == mechanism.solution.n_species  # Num targets?
+
+        all_concentrations = np.ndarray((num_conditions, mechanism.solution.n_species))
+
+        for exp_ndx, experiment in enumerate(experiment_set.all_simulated_experiments[0]):
+            concentrations, previous_concentrations, end_gas = Reactors.jsr(
+                *self.get_basic_args(experiment_set, experiment, mechanism),
+                experiment.conditions.get(Condition.RES_TIME),
+                experiment.conditions.get(Condition.VOLUME),
+                experiment.conditions.get(Condition.MDOT),
+                previous_concentrations=previous_concentrations
+            )
+
+            if output_all:
+                all_concentrations[exp_ndx, :] = previous_concentrations
+
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                data = self.get_pathway(end_gas)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            elif experiment_set.measurement == Measurement.OUTLET:
+                # Don't call get_outlet here, special case
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, concentrations)
+            else:
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+        return all_concentrations
+
+    def rapid_compression_machine(self, experiment_set: ExperimentSet, mechanism: Mechanism):
+        for experiment in experiment_set.all_simulated_experiments[0]:
+            concentrations, pressures, times = Reactors.rcm(
+                *self.get_basic_args(experiment_set, experiment, mechanism),
+                experiment.conditions.get(Condition.END_TIME),
+                experiment.conditions.get(Condition.V_OF_T)
+            )
+
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
+                data = SimulatorUtils.calculate_idt(experiment_set, times, pressures, concentrations)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            else:
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+    def const_t_p(self, experiment_set: ExperimentSet, mechanism: Mechanism):
+        for experiment in experiment_set.all_simulated_experiments[0]:
+            concentrations, pressures, temps, times, end_gas = Reactors.const_t_p(
+                *self.get_basic_args(experiment_set, experiment, mechanism),
+                experiment.conditions.get(Condition.END_TIME)
+            )
+
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                data = self.get_pathway(end_gas)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            elif experiment_set.measurement == Measurement.CONCENTRATION:
+                data = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            elif experiment_set.measurement == Measurement.OUTLET:
+                data = self.get_outlet(SimulatorUtils.interpolate(concentrations, times, numpy.array(
+                    [experiment.conditions.get(Condition.END_TIME)])))
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            else:
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+    def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions: List = None):
+        new_solution_list = []
+
+        for exp_ndx, experiment in enumerate(experiment_set.all_simulated_experiments[0]):
+            if previous_solutions is not None:
+                previous_solution = previous_solutions[exp_ndx]
+            else:
+                previous_solution = new_solution_list[exp_ndx - 1] if exp_ndx > 0 else None
+
+            concentrations, positions, velocities, temps = Reactors.free_flame(
+                *self.get_basic_args(experiment_set, experiment, mechanism),
+                previous_solution=previous_solution
+            )
+            new_solution = np.vstack((positions / max(positions), temps))  # normalize position
+            new_solution_list.append(new_solution)
+
+            if experiment_set.calculation_type == CalculationType.PATHWAY:
+                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+            elif experiment_set.measurement == Measurement.LAMINAR_FLAME_SPEED:
+                data = self.calculate_lfs(velocities)
+                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            else:
+                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
+
+        return new_solution_list
+
+    def calculate_idt(self, experiment_set: ExperimentSet, times, pressures, concentrations):  # TODO: Resolve pressure
+        """ Gets the ignition delay time for a reaction. Can determine IDT using one of three methods. Options are as
+            follows:
                 1: intersection of steepest slope with baseline
                 2: point of steepest slope
                 3: peak value of the target profile
-            :type method: str
-            :return idt: ignition delay time (s)
-            :rtype: float
-            :return warnings: possible warnings regarding the IDT determination
-            :rtype: list of strs
+
+            @param experiment_set The experiment file which specifies the relevant conditions
+            @param times The times which Cantera has given us
+            @param pressures The pressures which Cantera has given us
+            @param concentrations The concentrations which Cantera has given us
         """
 
         idt_targets = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGETS)
@@ -107,188 +267,14 @@ class OutcomeSimulator(ReactionSimulator):
     def get_pathway(self, end_gas):
         return end_gas.TPX
 
-    def shock_tube(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype='float')
-        p_of_t = SimulatorUtils.generate_p_of_t(
-            experiment_set.condition_range.conditions.get(Condition.END_TIME),
-            experiment_set.condition_range.conditions.get(Condition.DPDT)
-        )
-        end_time = experiment_set.condition_range.conditions.get(Condition.END_TIME)
-        exp_ndx = 0
-        for experiment in experiment_set.all_simulated_experiments[0]:
-            concentrations, pressures, temps, times = Reactors.st(
-                experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
-                experiment_set.get_target_species(), end_time, p_of_t
-            )
+    def calculate_lfs(self, velocities):
+        return velocities[0] * 100
 
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
-                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
+    def set_targets(self, experiment, targets: List[Species], mechanism, data):
+        for target in targets:
+            name = target.name
+            ndx = mechanism.solution.species_index(name)
+            experiment.results.set_target(name, data[ndx])
 
-            elif experiment_set.measurement == Measurement.CONCENTRATION:
-                # interpolate raw concentrations to fit uniform times
-                concentrations = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
-                T_of_t = SimulatorUtils.interpolate(temps, times, experiment_set.get_time_x_data())
-                ydata[exp_ndx] = numpy.append(concentrations, T_of_t[numpy.newaxis, :], axis=0)
-
-            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                experiment.set
-                ydata[exp_ndx] = self.calculate_idt(experiment_set, times, pressures, concentrations)
-
-            elif experiment_set.measurement == Measurement.HALF_LIFE:  # TODO: Currently assumes only one target
-                half_value = concentrations[0][0] / 2
-                index = numpy.abs(concentrations[0] - half_value).argmin()
-                ydata[exp_ndx] = times[index]
-                # NaN if half value not reached
-                if half_value < numpy.min(concentrations[0]):
-                    ydata[exp_ndx] = numpy.nan
-
-            elif experiment_set.measurement == Measurement.ABSORPTION:
-                ydata = self.calculate_absorption(experiment_set, experiment, concentrations, times)
-
-            elif experiment_set.measurement == Measurement.OUTLET:
-                # Get the y value AT end time
-                ydata = self.get_outlet(SimulatorUtils.interpolate(concentrations, times, numpy.array([end_time])))
-
-            else:
-                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
-
-            exp_ndx += 1
-        return ydata
-
-    def plug_flow_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        dtype = 'object' if experiment_set.calculation_type == CalculationType.PATHWAY else 'float'
-        ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype=dtype)
-        exp_ndx = 0
-        for experiment in experiment_set.get_conditions():
-            concentrations, times, positions, end_gas = Reactors.pfr(
-                experiment.conditions.get(Condition.TEMPERATURE),
-                experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
-                experiment_set.get_target_species(),
-                experiment.conditions.get(Condition.MDOT),
-                experiment.conditions.get(Condition.AREA),
-                experiment.conditions.get(Condition.LENGTH),
-                experiment.conditions.get(Condition.RES_TIME),
-                experiment.conditions.get(Condition.X_PROFILE),
-                experiment.conditions.get(Condition.TIME_PROFILE),
-                experiment.conditions.get(Condition.TIME_PROFILE_SETPOINTS)
-            )
-
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
-                ydata[exp_ndx] = self.get_pathway(end_gas)
-            elif experiment_set.measurement == Measurement.OUTLET:
-                ydata[exp_ndx] = self.get_outlet(concentrations)
-            else:
-                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
-            exp_ndx += 1
-        return ydata
-
-    def jet_stream_reactor(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions=None, output_all=False):
-        ydata_shape = SimulatorUtils.generate_ydata_shape(experiment_set, mechanism)
-        dtype = 'object' if experiment_set.calculation_type == CalculationType.PATHWAY else 'float'
-        ydata = numpy.ndarray(ydata_shape, dtype=dtype)
-
-        # Make sure that the prev_soln array is the right size (if given)
-        if previous_solutions is not None:
-            prev_solns_shape = np.shape(previous_solutions)
-            assert prev_solns_shape[0] == ydata_shape[0]  # [0] is # of conditions
-            assert prev_solns_shape[1] == mechanism.solution.n_species
-
-        all_concentrations = np.ndarray((ydata_shape[0], mechanism.solution.n_species))
-
-        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
-            concentrations, previous_concentrations, end_gas = Reactors.jsr(
-                experiment.conditions.get(Condition.TEMPERATURE),
-                experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
-                experiment_set.get_target_species(),
-                experiment.conditions.get(Condition.RES_TIME),
-                experiment.conditions.get(Condition.VOLUME),
-                experiment.conditions.get(Condition.MDOT),
-                previous_concentrations=previous_concentrations
-                #todo-t: is ok?
-            )
-
-            if output_all:
-                all_concentrations[exp_ndx, :] = previous_concentrations
-
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
-                ydata[exp_ndx] = self.get_pathway(end_gas)
-            elif experiment_set.measurement == Measurement.Outlet:
-                ydata[exp_ndx] = concentrations  # Yes, this is intentional. It's a special case
-            else:
-                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
-
-        return ydata, all_concentrations
-
-    def rapid_compression_machine(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism))
-        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
-            concentrations, pressures, times = Reactors.rcm(
-                experiment.conditions.get(Condition.TEMPERATURE),
-                experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
-                experiment_set.get_target_species(),
-                experiment.conditions.get(Condition.END_TIME),
-                experiment.conditions.get(Condition.V_OF_T)
-            )
-
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
-                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
-            elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                ydata[exp_ndx] = SimulatorUtils.calculate_idt(experiment_set, times, pressures, concentrations)
-            else:
-                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
-
-    def const_t_p(self, experiment_set: ExperimentSet, mechanism: Mechanism):
-        dtype = 'object' if experiment_set.calculation_type == CalculationType.PATHWAY else 'float'
-        ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism), dtype=dtype)
-
-        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
-            concentrations, pressures, temps, times, end_gas = Reactors.const_t_p(
-                experiment.conditions.get(Condition.TEMPERATURE),
-                experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds,
-                mechanism,
-                experiment_set.get_target_species(),
-                experiment.conditions.get(Condition.END_TIME)
-            )
-
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
-                ydata[exp_ndx] = self.get_pathway(end_gas)
-            elif experiment_set.measurement == Measurement.CONCENTRATION:
-                ydata[exp_ndx] = SimulatorUtils.interpolate(concentrations, times, experiment_set.get_time_x_data())
-            elif experiment_set.measurement == Measurement.OUTLET:
-                ydata[exp_ndx] = self.get_outlet(SimulatorUtils.interpolate(concentrations, times, numpy.array([experiment.conditions.get(Condition.END_TIME)])))
-            else:
-                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
-
-    def free_flame(self, experiment_set: ExperimentSet, mechanism: Mechanism, previous_solutions: List = None):
-        ydata = numpy.ndarray(SimulatorUtils.generate_ydata_shape(experiment_set, mechanism))
-        new_solution_list = []
-
-        for exp_ndx, experiment in enumerate(experiment_set.get_conditions()):
-            if previous_solutions is not None:
-                previous_solution = previous_solutions[exp_ndx]
-            else:
-                previous_solution = new_solution_list[exp_ndx - 1] if exp_ndx > 0 else None
-            concentrations, positions, velocities, temps = Reactors.free_flame(
-                experiment.conditions.get(Condition.TEMPERATURE),
-                experiment.conditions.get(Condition.PRESSURE),
-                experiment.compounds, mechanism,
-                experiment_set.get_target_species(),
-                previous_solution = previous_solution
-            )
-            new_solution = np.vstack((positions / max(positions), temps))  # normalize position
-            new_solution_list.append(new_solution)
-
-            if experiment_set.calculation_type == CalculationType.PATHWAY:
-                SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
-            elif experiment_set.measurement == Measurement.LAMINAR_FLAME_SPEED:
-                ydata[exp_ndx] = velocities[0] * 100
-            else:
-                SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
-
-        return ydata, new_solution_list
-
+    def get_basic_args(self, experiment_set, experiment, mechanism):
+        return experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE), experiment.mixtures, mechanism.solution, experiment_set.get_target_species(),
