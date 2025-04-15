@@ -204,11 +204,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-<<<<<<< HEAD
-    def jsr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, res_time, vol, mdot=None, prev_concs=None):
-=======
-    def jsr(temp: Quantity, pressure: Quantity, mix: List[Compound], gas, targ_spcs, res_time, vol, mdot=None, previous_concentrations=None):
->>>>>>> 4ff4f5d8826aad7a8051c03a6b01dcaa0d05b0a9
+    def jsr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, res_time, vol, mdot=None, previous_concentrations=None):
         #todo-t: took this out as the last param and made it a local variable
         max_iter = 30000
 
@@ -217,10 +213,10 @@ class Reactors:
         inlet = Cantera.Reservoir(gas)
         exhaust = Cantera.Reservoir(gas)
 
-        # Create reactor, using prev_concs to speed up convergence
-        prev_concs_input = True
+        # Create reactor, using previous_concentrations to speed up convergence
+        previous_concentrations_input = True
         if previous_concentrations is None:
-            prev_concs_input = False
+            previous_concentrations_input = False
             previous_concentrations = mix
         gas = Reactors.set_state(gas, temp, pressure, previous_concentrations)
         reac = Cantera.IdealGasReactor(gas, energy='off', volume=vol)
@@ -245,7 +241,7 @@ class Reactors:
             print(f"JSR solver failed at {temp} K for mechanism {gas.name}. The "
                   f"error was:\n{ct_error}")
             # If no initial guess, set results to None for next iteration
-            if prev_concs_input is False:
+            if previous_concentrations_input is False:
                 all_concs = None
             # If an initial guess was input, return it for use in the next iteration
             else:
@@ -340,43 +336,12 @@ class Reactors:
     def set_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
         #todo-t: delete conv?
         pressure = pressure.to('pascal')
-
-
         # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
         # TODO-t: come back when you know what mix is
-        if 0 == 0:
-            pass
-
-        if isinstance(mix, dict) and 'fuel' in mix:  # If there is a mixture defined using phi
-            # Create string for fuel species
-            fuel = ''
-            fuel_count = len(mix['fuel'])
-            for i in range(fuel_count):
-                spc = mix['fuel'][i]
-                if fuel_count > 1:
-                    ratio = mix['fuel_ratios'][0][i]
-                    fuel += f'{spc}: {ratio}'
-                    if i + 1 < fuel_count:  # if not on last spc, add a comma
-                        fuel += ', '
-                else:
-                    fuel += spc
-            # Create string for oxidizer species
-            oxid = ''
-            oxid_count = len(mix['oxid'])
-            for i in range(oxid_count):
-                spc = mix['oxid'][i]
-                if oxid_count > 1:
-                    ratio = mix['oxid_ratios'][0][i]
-                    oxid += f'{spc}: {ratio}'
-                    if i + 1 < oxid_count:  # if not on last spc, add a comma
-                        oxid += ', '
-                else:
-                    oxid += spc
-
-            phi = mix['phi']
-            gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
-            gas.TP = temp, pressure
-        else:  # if mix is defined in terms of mole fractions
-            gas.TPX = temp, pressure, mix
-
+        if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
+            fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
+            oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
+        else:
+            mixture = mix[MixtureType.GAS_MIXTURE]
+# TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
         return gas
