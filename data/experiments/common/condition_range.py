@@ -63,3 +63,6 @@ class ConditionRange:
         :return:
         """
         return self.conditions.get(variable)
+
+    def has(self, condition: Condition) -> bool:
+        return self.conditions.has(condition)

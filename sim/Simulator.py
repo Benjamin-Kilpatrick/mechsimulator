@@ -1,7 +1,10 @@
 from typing import List
 
+import numpy
+
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.experiment_set import ExperimentSet
+from data.experiments.reaction import Reaction
 from data.mechanism.mechanism import Mechanism
 from sim.OutcomeSimulator import OutcomeSimulator
 from sim.PathwaySimulator import PathwaySimulator
@@ -13,14 +16,21 @@ class Simulator:
     sensitivity_simulator: SensitivitySimulator = SensitivitySimulator()
 
     @staticmethod
-    def run_experiment_set(experiment_set: ExperimentSet, mechanism: List[Mechanism]):
-        if experiment_set.calculation_type == CalculationType.OUTCOME:
-            return Simulator.outcome_simulator.simulate_experiment_set(experiment_set, mechanism)
-        elif experiment_set.calculation_type == CalculationType.PATHWAY:  # TODO: reconcile differing measurement types
-            # PathwaySimulator.simulate_experiment_set(experiment_set, mechanism)
-            return Simulator.outcome_simulator.simulate_experiment_set(experiment_set, mechanism)
-        elif experiment_set.calculation_type == CalculationType.SENSITIVITY:
-            return Simulator.sensitivity_simulator.simulate_experiment_set(experiment_set, mechanism)
-        else:
-            raise NotImplementedError(f"{experiment_set.calculation_type} does not have a simulator associated with "
-                                      f"it yet.")
+    def run_experiment_set(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
+        for mechanism in mechanisms:
+            if experiment_set.calculation_type == CalculationType.OUTCOME or experiment_set.calculation_type == CalculationType.PATHWAY:
+                Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
+
+            elif experiment_set.calculation_type == CalculationType.SENSITIVITY:
+                Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
+                if experiment_set.reaction == Reaction.SHOCKTUBE:
+                    # add epsilon to prevent divide by 0
+                    experiment_set.all_simulated_experiments[0] += numpy.finfo(float).eps
+                for reaction_ndx, experiments in enumerate(experiment_set.all_simulated_experiments[1:]):
+                    mechanism.solution.set_multiplier(1.0)  # Reset all multipliers to original values
+                    mechanism.solution.set_multiplier(1 + SensitivitySimulator.FACTOR, reaction_ndx)
+                    Simulator.sensitivity_simulator.simulate_experiments(experiment_set, experiments, mechanism)
+
+            else:
+                raise NotImplementedError(f"{experiment_set.calculation_type} does not have a simulator associated with "
+                                          f"it yet.")
