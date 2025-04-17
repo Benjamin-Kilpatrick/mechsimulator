@@ -81,36 +81,6 @@ class SimulatorUtils:
         return p_of_t
 
     @staticmethod
-    def generate_ydata_shape(experiment_set: ExperimentSet, mechanism: Mechanism) -> Tuple:
-        # Conditions length
-        shape: List[int] = [len(experiment_set.generate_conditions())]
-        if experiment_set.calculation_type == CalculationType.PATHWAY:
-            return tuple(shape)
-
-        # Targets length
-        if experiment_set.measurement in (Measurement.ABSORPTION, Measurement.EMISSION):
-            num_wavelengths = len(experiment_set.condition_range.conditions.get(Condition.WAVELENGTH))
-            num_active_species = len(experiment_set.condition_range.conditions.get(Condition.ACTIVE_SPECIES))
-            shape.append(num_wavelengths * (num_active_species + 1))  # Add one for aggregation
-        elif experiment_set.measurement == Measurement.HALF_LIFE:
-            shape.append(1)
-        else:
-            shape.append(len(experiment_set.get_target_species()))
-
-        # Times length
-        if experiment_set.measurement in (
-                Measurement.ABSORPTION, Measurement.EMISSION,
-                Measurement.PRESSURE, Measurement.CONCENTRATION
-        ):
-            shape.append(len(experiment_set.get_time_x_data()))
-
-        # Prepend metadata if necessary
-        if experiment_set.calculation_type == CalculationType.SENSITIVITY:
-            shape = [mechanism.solution.n_reactions] + shape
-
-        return tuple(shape)
-
-    @staticmethod
     def raise_reaction_measurement_error(reaction: Reaction, measurement: Measurement):
         raise ValueError(f"{reaction} reactions are not equipped to calculate {measurement}")
 
