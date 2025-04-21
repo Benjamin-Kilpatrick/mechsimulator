@@ -32,3 +32,7 @@ class TargetSpecies:
             if name == species.name:
                 return species
         return None
+
+    def get_special_target_enumerations(self) -> List[Target]:
+        return list(self.special_targets.keys())
+

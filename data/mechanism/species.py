@@ -1,3 +1,5 @@
+from typing import List
+
 from typing_extensions import Self
 
 
@@ -25,3 +27,7 @@ class Species:
 
     def __repr__(self) -> str:
         return f"<Species name:{self.name} smiles:{self.smiles} InChI:{self.InChI} spin:{self.spin} charge:{self.charge} excited:{self.excited}>"
+
+    def __hash__(self):
+        params: List = [self.InChI, self.spin, self.charge, self.excited]
+        return hash(params)

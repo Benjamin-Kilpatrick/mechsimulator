@@ -6,6 +6,8 @@ import yaml
 from data.experiments.common.condition import Condition
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
+from data.experiments.mixture import Mixture
+from data.experiments.mixture_type import MixtureType
 from data.mechanism.species import Species
 from serial.common.utils import Utils
 
@@ -44,7 +46,7 @@ class ExperimentWriter:
                 'conditions': []
             },
             'species': [],
-            'mixture': [],
+            'mixture': {},
             'measured_experiments': []
         }
 
@@ -72,32 +74,33 @@ class ExperimentWriter:
                     'excited': species.excited
                 }
             )
+        mixture_type: MixtureType
+        mix: Mixture
+        for mixture_type, mix in experiment_set.simulated_mixture.items():
+            output_dict['mixture'][mixture_type.name] = []
 
-        species: Species
-        for species, quantity in experiment_set.simulated_mixture.species:
-            output_dict['mixture'].append({
+            species: Species
+            for species, quantity in mix.species:
+                output_dict['mixture'][mixture_type.name].append({
                     'name': species.name,
                     'concentration': {
-                            'value': quantity,
-                            'lower_bound': None,
-                            'upper_bound': None
-                        }
-                }
-            )
-        if experiment_set.simulated_mixture.balanced is not None:
-            output_dict['mixture'].append({
-                    'name': experiment_set.simulated_mixture.balanced.name,
-                    'concentration': {
-                        'value': 'bal'
+                        'value': f'{quantity:D}'
                     }
-                }
-            )
+                })
+            if mix.balanced is not None:
+                output_dict['mixture'][mixture_type.name].append({
+                        'name': mix.balanced.name,
+                        'concentration': {
+                            'value': 'bal'
+                        }
+                    }
+                )
 
         experiment: Experiment
         for experiment in experiment_set.measured_experiments:
             experiment_dict = {
                 'conditions': [],
-                'mixture': [],
+                'mixture': {},
                 'results': {
                     'conditions': {},
                     'targets': {}
@@ -112,24 +115,28 @@ class ExperimentWriter:
                     }
                 )
 
-            for species, quantity in experiment.mixtures.species:
-                experiment_dict['mixture'].append({
+            mixture_type: MixtureType
+            mix: Mixture
+            for mixture_type, mix in experiment.mixtures.items():
+                experiment_dict['mixture'][mixture_type.name] = []
+
+                species: Species
+                for species, quantity in mix.species:
+                    experiment_dict['mixture'][mixture_type.name].append({
                         'name': species.name,
                         'concentration': {
-                                'value': quantity,
-                                'lower_bound': None,
-                                'upper_bound': None
-                            }
-                    }
-                )
-            if experiment.mixtures.balanced is not None:
-                experiment_dict['mixture'].append({
-                        'name': experiment.mixtures.balanced.name,
-                        'concentration': {
-                            'value': 'bal'
+                            'value': f'{quantity:D}'
                         }
-                    }
-                )
+                    })
+
+                if mix.balanced is not None:
+                    experiment_dict['mixture'][mixture_type.name].append({
+                            'name': mix.balanced.name,
+                            'concentration': {
+                                'value': 'bal'
+                            }
+                        }
+                    )
 
             for condition in experiment.results.get_variables():
                 experiment_dict['results']['conditions'][condition.name] = Utils.convert_quantity_to_str(experiment.results.get_variable(condition))
