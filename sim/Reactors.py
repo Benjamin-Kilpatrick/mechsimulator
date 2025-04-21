@@ -16,7 +16,7 @@ from data.experiments.mixture_type import MixtureType
 class Reactors:
 
     @staticmethod
-    def st(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time, press_of_time=None):
+    def st(temp: Quantity, pressure: Quantity, mix, gas, targ_species, end_time, press_of_time=None):
         """
         Will run a shock tube simulation. The non-ideal pressure rise, dP/dt, and can be incorporated via an optional P(t) profile
         
@@ -95,7 +95,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def rcm(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time, velocity_of_time):
+    def rcm(temp: Quantity, pressure: Quantity, mix, gas, targ_species, end_time, velocity_of_time):
         """
         Runs a rapid compression machine simulation, with compression and heat
         loss incorporated via an input V(t) profile
@@ -163,7 +163,7 @@ class Reactors:
     # ---------------
     #todo-t: Change Quantity to condition? Again, mix List or single? how does list differ?
     @staticmethod
-    def pfr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
+    def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
         """
         
         :param temp: reactor inlet temperature, pre-configured to kelvin via pint
@@ -254,7 +254,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def jsr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, res_time, vol, mdot=None, previous_concentrations=None):
+    def jsr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, res_time, vol, mdot=None, previous_concentrations=None):
         """
         Runs a jet-stirred reactor simulation
         :param temp: reactor inlet temperature, pre-configured to kelvin via pint
@@ -331,7 +331,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def const_t_p(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time):
+    def const_t_p(temp: Quantity, pressure: Quantity, mix, gas, targ_species, end_time):
         """
         Runs a constant-temperature, constant-pressure 0-D simulation
 
@@ -381,7 +381,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def free_flame(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, previous_solution=None):
+    def free_flame(temp: Quantity, pressure: Quantity, mix, gas, targ_species, previous_solution=None):
         """
         Runs an adiabatic, 1-D, freely propagating flame simulation
         TODO: NOTE: need to add options for simulation details
@@ -431,16 +431,60 @@ class Reactors:
         return targ_concs, pos, vels, temps
 
     # ---------------
+#     @staticmethod
+#     def set_state(gas, temp: Quantity, pressure: Quantity, mix):
+#         # TODO-t: change to just call the gas.TPX or gas.TP for the mixtures now, using original mix.
+# 
+#         # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
+#         # TODO-t: come back when you know what mix is
+#         if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
+#             fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
+#             oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
+# 
+#         else:
+#             mixture = mix[MixtureType.GAS_MIXTURE]
+# # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
+#         return gas
     @staticmethod
-    def set_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
-        #todo-t: delete conv?
-        pressure = pressure.to('pascal')
-        # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
-        # TODO-t: come back when you know what mix is
-        if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
-            fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
-            oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
-        else:
-            mixture = mix[MixtureType.GAS_MIXTURE]
-# TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
+    def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix):
+        # TODO-t: change to just call the gas.TPX or gas.TP for the mixtures now, using original mix.
+        #should already be taken care of (conversions)
+        gas.TPX = temp, pressure, mix
+    # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
+        return gas
+
+    @staticmethod
+    def set_fuel_state(gas, temp: Quantity, pressure: Quantity, mix):
+        # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
+        if isinstance(mix, dict) and 'fuel' in mix:  # if mix defined using phi
+            # Create string for fuel species
+            fuel = ''
+            nfuels = len(mix['fuel'])
+            for idx in range(nfuels):
+                spc = mix['fuel'][idx]
+                if nfuels > 1:
+                    ratio = mix['fuel_ratios'][0][idx]
+                    fuel += f'{spc}: {ratio}'
+                    if idx + 1 < nfuels:  # if not on last spc, add a comma
+                        fuel += ', '
+                else:
+                    fuel += spc
+            # Create string for oxidizer species
+            oxid = ''
+            noxids = len(mix['oxid'])
+            for idx in range(noxids):
+                spc = mix['oxid'][idx]
+                if noxids > 1:
+                    ratio = mix['oxid_ratios'][0][idx]
+                    oxid += f'{spc}: {ratio}'
+                    if idx + 1 < noxids:  # if not on last spc, add a comma
+                        oxid += ', '
+                else:
+                    oxid += spc
+
+            phi = mix['phi']
+            gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
+            gas.TP = temp, pressure
+
+        # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
         return gas
