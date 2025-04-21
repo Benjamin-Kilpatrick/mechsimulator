@@ -30,7 +30,7 @@ class Utils:
             Measurement.ION, Measurement.PRESSURE,
             Measurement.CONCENTRATION
         ],
-        Reaction.FREE_FLAME: [Measurement.LFS]
+        Reaction.FREE_FLAME: [Measurement.LAMINAR_FLAME_SPEED]
     }
     @staticmethod
     def get_compatible_measurements(reaction: Reaction) -> List[Measurement]:

@@ -7,7 +7,7 @@ from sim.ReactionSimulator import ReactionSimulator
 
 class PathwaySimulator(ReactionSimulator):
     @staticmethod
-    def simulate_experiment_set(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
+    def simulate_experiments(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
         raise NotImplementedError
 
     @staticmethod

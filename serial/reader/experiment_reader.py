@@ -573,7 +573,7 @@ class ExperimentReader:
 
             variable_set.set(Condition.TIME_STEP, time_step)
             variable_set.set(Condition.END_TIME, end_time)
-        elif measurement == Measurement.LFS:
+        elif measurement == Measurement.LAMINAR_FLAME_SPEED:
             pass
         elif measurement == Measurement.HALF_LIFE:
             end_time: Quantity = UnitParser.parse(
