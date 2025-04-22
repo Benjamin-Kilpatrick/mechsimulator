@@ -151,7 +151,7 @@ class ExperimentSet:
         source: DataSource = x_source if x_source is not None else self.x_source
         if self.has(Condition.END_TIME):
             return self.get_time_x_data(source)
-        return self.get_x_data(source)
+        return self.get_condition_x_data(source)
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species

@@ -7,7 +7,6 @@ from data.experiments.experiment_set import ExperimentSet
 from data.experiments.reaction import Reaction
 from data.mechanism.mechanism import Mechanism
 from sim.OutcomeSimulator import OutcomeSimulator
-from sim.PathwaySimulator import PathwaySimulator
 from sim.SensitivitySimulator import SensitivitySimulator
 from sim.SimulatorUtils import SimulatorUtils
 
