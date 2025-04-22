@@ -9,6 +9,7 @@ from data.mechanism.mechanism import Mechanism
 from sim.OutcomeSimulator import OutcomeSimulator
 from sim.PathwaySimulator import PathwaySimulator
 from sim.SensitivitySimulator import SensitivitySimulator
+from sim.SimulatorUtils import SimulatorUtils
 
 
 class Simulator:
@@ -17,9 +18,8 @@ class Simulator:
 
     @staticmethod
     def run_experiment_set(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
-
-
         for mechanism in mechanisms:
+            SimulatorUtils.rename_all_species(experiment_set, mechanism)
             if experiment_set.calculation_type == CalculationType.OUTCOME or experiment_set.calculation_type == CalculationType.PATHWAY:
                 Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
 
