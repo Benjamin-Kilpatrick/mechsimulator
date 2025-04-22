@@ -201,10 +201,37 @@ class SpeciesExperimentLine(PlotterLine):
         return "Ur mom"
 
     def get_color(self):
+        return "black"
+
+    def get_linestyle(self):
+        return ''
+
+    def get_marker(self):
+        return 'o'
+
+    def get_zorder(self):
+        return None
+
+    def get_xdata(self):
+        return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
+
+    def get_ydata(self) -> np.ndarray:
+        out = [experiment.results.target_results[self.spc.name] if self.spc.name in experiment.results.target_results else None for experiment in self.experiment_set.measured_experiments ]
+        return np.asarray(out)
+
+class SpeciesSimulatedLine(PlotterLine):
+    def __init__(self, spc: Species, experiment_set: ExperimentSet):
+        self.experiment_set = experiment_set
+        self.spc = spc
+
+    def get_label(self):
+        return "Ur mom"
+
+    def get_color(self):
         return "red"
 
     def get_linestyle(self):
-        return "-"
+        return ''
 
     def get_marker(self):
         return 1.0
@@ -214,20 +241,22 @@ class SpeciesExperimentLine(PlotterLine):
 
     def get_xdata(self):
         return np.asarray([])
+        #return self.experiment_set.get_x_data(x_source=DataSource.SIMULATION)
 
     def get_ydata(self) -> np.ndarray:
         return np.asarray([])
-
+        #size = len(self.experiment_set.get_x_data(x_source=DataSource.SIMULATION)) # TODO! temp until actual data exists
+        #return np.asarray([1.0] * size)
 
 class PlotterFigureAxesIterator:
     """
     This is an iterator class that gives the properly indexed list of axes such that each axis falls on the correct
     location in the grid.
     """
-    def __init__(self, fig, plot_format: PlotterFormat):
-        self.fig = fig
-        self.rows = plot_format.rows
-        self.cols = plot_format.cols
+    def __init__(self, fig: Figure, plot_format: PlotterFormat):
+        self.fig:Figure = fig
+        self.rows:int = plot_format.rows
+        self.cols:int = plot_format.cols
 
         # state
         self.index = 0
@@ -242,16 +271,17 @@ class PlotterFigureAxesIterator:
 
 
 class PlotterSubplot:
-    def __init__(self, ax: Axes, lines: List[PlotterLine]):
+    def __init__(self, ax: Axes, lines: List[PlotterLine], plot_format: PlotterFormat):
         self.ax: Axes = ax
         self.lines: List[PlotterLine] = lines
+        self.plot_format = plot_format
 
     def plot(self):
         for line in self.lines:
             line.plot(self.ax)
 
     @staticmethod
-    def load_measured_from_experiment_set(experiment_set: ExperimentSet, fig: Figure, axes_iterator:PlotterFigureAxesIterator) -> list:
+    def load_measured_from_experiment_set(experiment_set: ExperimentSet, axes_iterator:PlotterFigureAxesIterator) -> list:
         subplots = []
         # load measured experiments
         # if len(experiment_set.measured_experiments) > 0:
@@ -264,8 +294,8 @@ class PlotterSubplot:
 
 class PlotterSpeciesSubplot(PlotterSubplot):
     def __init__(self, ax: Axes, spc: Species, experiment_set: ExperimentSet, plot_format: PlotterFormat):
-        lines = [SpeciesExperimentLine(spc, experiment_set)]
-        super().__init__(ax, lines)
+        lines = [SpeciesExperimentLine(spc, experiment_set), SpeciesSimulatedLine(spc, experiment_set)]
+        super().__init__(ax, lines, plot_format)
         self.spc = spc
 
         # set ax info
@@ -273,12 +303,13 @@ class PlotterSpeciesSubplot(PlotterSubplot):
         self.ax.set_xscale(plot_format.xscale)
         self.ax.set_yscale(plot_format.yscale)
         if plot_format.ylimit is not None:
-            self.ax.set_ylim(plot_format.ylimit)
+            begin, end = plot_format.ylimit
+            #self.ax.set_ylim(ymin=begin, ymax=end)
         if plot_format.xlimit is not None:
             self.ax.set_xlim(plot_format.xlimit)
 
     @staticmethod
-    def load_from_experiment_set(experiment_set: ExperimentSet, fig: Figure, plot_format: PlotterFormat, axes_iterator:PlotterFigureAxesIterator) -> list:
+    def load_from_experiment_set(experiment_set: ExperimentSet, plot_format: PlotterFormat, axes_iterator:PlotterFigureAxesIterator) -> list:
         subplots = []
         # load spc data
 
@@ -296,9 +327,8 @@ class PlotterFigure: # Called plot in o.g.
         self.axes_iterator = PlotterFigureAxesIterator(self.fig, self.plot_format)
 
         # do this for every subplot
-        self.subplots.extend(PlotterSubplot.load_measured_from_experiment_set(experiment_set, self.fig, self.axes_iterator))
-        self.subplots.extend(PlotterSpeciesSubplot.load_from_experiment_set(experiment_set, self.fig, self.plot_format, self.axes_iterator))
-
+        self.subplots.extend(PlotterSubplot.load_measured_from_experiment_set(experiment_set, self.axes_iterator))
+        self.subplots.extend(PlotterSpeciesSubplot.load_from_experiment_set(experiment_set, self.plot_format, self.axes_iterator))
 
     def plot(self):
         for subplot in self.subplots:
