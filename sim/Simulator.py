@@ -17,6 +17,8 @@ class Simulator:
 
     @staticmethod
     def run_experiment_set(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
+
+
         for mechanism in mechanisms:
             if experiment_set.calculation_type == CalculationType.OUTCOME or experiment_set.calculation_type == CalculationType.PATHWAY:
                 Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
