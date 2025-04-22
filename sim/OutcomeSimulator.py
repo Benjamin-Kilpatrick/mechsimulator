@@ -165,7 +165,7 @@ class OutcomeSimulator(ReactionSimulator):
                 previous_solution = new_solution_list[exp_ndx - 1] if exp_ndx > 0 else None
 
             concentrations, positions, velocities, temps = Reactors.free_flame(
-                *self.get_basic_args(experiment_set, experiment, mechanism),
+                *self.get_basic_args(experiment_set, experiment, mechanism), experiment.conditions.get(Condition.PHI),
                 previous_solution=previous_solution
             )
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position

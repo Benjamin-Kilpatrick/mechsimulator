@@ -2,8 +2,8 @@ import cantera
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 import cantera as Cantera
-from typing import List, Dict
 from pint import Quantity
+from SimulatorUtils import SimulatorUtils
 
 from data.experiments.mixture import Mixture
 from data.experiments.mixture_type import MixtureType
@@ -36,7 +36,7 @@ class Reactors:
         """
         #todo-t: specify the Mixture?
         temp = temp()
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         if press_of_time is None:
             # Create an array of ones spanning from t=0 to t=end_time
@@ -114,7 +114,7 @@ class Reactors:
             2. pressures - Solution pressures
             3. times - Solution times
         """
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         print('inside reactions, rcm temp: ', temp)
         # Normalize the volume profile by the first value
@@ -196,9 +196,9 @@ class Reactors:
             # Create the interp object and interp (note: the [0] gets rid of uncertainties)
             interp = RegularGridInterpolator((x_profile[0], t_profile_setpoints), t_data)
             start_temp = interp((0, temp))
-            gas = Reactors.set_state(gas, start_temp, pressure, mix)
+            gas = Reactors.set_gas_state(gas, start_temp, pressure, mix)
         else:  # otherwise, just use the given, fixed T
-            gas = Reactors.set_state(gas, temp, pressure, mix)
+            gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         # Create reactor and reactor network
         reac = Cantera.IdealGasConstPressureReactor(gas)
@@ -276,7 +276,7 @@ class Reactors:
         max_iter = 30000
 
         # Note: must set gas with mix before creating reservoirs!
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
         inlet = Cantera.Reservoir(gas)
         exhaust = Cantera.Reservoir(gas)
 
@@ -285,7 +285,7 @@ class Reactors:
         if previous_concentrations is None:
             previous_concentrations_input = False
             previous_concentrations = mix
-        gas = Reactors.set_state(gas, temp, pressure, previous_concentrations)
+        gas = Reactors.set_gas_state(gas, temp, pressure, previous_concentrations)
         reac = Cantera.IdealGasReactor(gas, energy='off', volume=vol)
 
         # Set up devices
@@ -348,7 +348,7 @@ class Reactors:
             4. times - Solution times
             5. end_gas - the gas originally passed in
         """
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         # Setting energy to 'off' holds T constant
         reac = Cantera.IdealGasConstPressureReactor(gas, energy='off')
@@ -381,7 +381,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def free_flame(temp: Quantity, pressure: Quantity, mix, gas, targ_species, previous_solution=None):
+    def free_flame(temp: Quantity, pressure: Quantity, mix, gas, targ_species, phi, previous_solution=None):
         """
         Runs an adiabatic, 1-D, freely propagating flame simulation
         TODO: NOTE: need to add options for simulation details
@@ -391,7 +391,9 @@ class Reactors:
         :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
         :param gas: Cantera object describing a kinetic gas (mechanism)
         :param targ_species: desired species concentrations
-        :param previous_solution temperature profile vs. position; first column is position, second is temperature
+        :param previous_solution: temperature profile vs. position; first column is position, second is temperature
+        :param phi: ratio of the actual fuel-to-oxidizer ratio to the stoichiometric fuel-to-oxidizer ratio.
+
         :return:
             1. targ_concs - the target concentrations
             2. pos - array of grid positions (m)
@@ -400,7 +402,7 @@ class Reactors:
         """
 
         # initialize the data from Cantera
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_fuel_state(gas, temp, pressure, mix, phi)
         loglevel = 0 # TODO-t:what is the purpose of supressing output here?
         flame: cantera.FreeFlame = Cantera.FreeFlame(gas) # cantera returns a result here from this input
         flame.transport_model = 'Mix'
@@ -430,31 +432,27 @@ class Reactors:
 
         return targ_concs, pos, vels, temps
 
-    # ---------------
-#     @staticmethod
-#     def set_state(gas, temp: Quantity, pressure: Quantity, mix):
-#         # TODO-t: change to just call the gas.TPX or gas.TP for the mixtures now, using original mix.
-# 
-#         # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
-#         # TODO-t: come back when you know what mix is
-#         if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
-#             fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
-#             oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
-# 
-#         else:
-#             mixture = mix[MixtureType.GAS_MIXTURE]
-# # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
-#         return gas
     @staticmethod
     def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix):
-        # TODO-t: change to just call the gas.TPX or gas.TP for the mixtures now, using original mix.
-        #should already be taken care of (conversions)
-        gas.TPX = temp, pressure, mix
-    # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
+        new_mix = SimulatorUtils.convert_gas_mixture(mix)
+        gas.TPX = temp, pressure, new_mix
         return gas
 
     @staticmethod
-    def set_fuel_state(gas, temp: Quantity, pressure: Quantity, mix):
+    def set_fuel_state(gas, temp: Quantity, pressure: Quantity, mix, phi):
+        """
+
+        :param gas:
+        :param temp:
+        :param pressure:
+        :param mix:
+        :param phi: ratio of the actual fuel-to-oxidizer ratio to the stoichiometric fuel-to-oxidizer ratio.
+        :return:
+        """
+
+        # if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
+        # fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
+        #             oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
         # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
         if isinstance(mix, dict) and 'fuel' in mix:  # if mix defined using phi
             # Create string for fuel species
