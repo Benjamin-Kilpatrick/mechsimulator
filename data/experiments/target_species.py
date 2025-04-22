@@ -36,3 +36,14 @@ class TargetSpecies:
     def get_special_target_enumerations(self) -> List[Target]:
         return list(self.special_targets.keys())
 
+
+    def copy(self):
+        all_targets: List[Species] = [spc.copy() for spc in self.all_targets]
+        special_targets: Dict[Target, List[Species]] = {
+            target: [spc.copy() for spc in targets] for target, targets in self.special_targets.items()
+        }
+        target_species: TargetSpecies = TargetSpecies()
+        target_species.all_targets = all_targets
+        target_species.special_targets = special_targets
+
+        return target_species

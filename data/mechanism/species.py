@@ -31,3 +31,13 @@ class Species:
     def __hash__(self):
         params: List = [self.InChI, self.spin, self.charge, self.excited]
         return hash(params)
+
+    def copy(self):
+        return Species(
+            self.name,
+            self.smiles,
+            self.InChI,
+            self.spin,
+            self.charge,
+            self.excited
+        )

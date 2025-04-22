@@ -18,3 +18,13 @@ class Mixture:
             self.balanced = species
         else:
             raise Exception('Balanced species already set')
+
+    def copy(self):
+        species = [(spc.copy(), quantity) for spc, quantity in self.species]
+        balanced = self.balanced.copy() if self.balanced is not None else None
+
+        mixture: Mixture = Mixture()
+        mixture.species = species
+        mixture.balanced = balanced
+
+        return mixture

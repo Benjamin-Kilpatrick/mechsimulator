@@ -66,3 +66,19 @@ class ConditionRange:
 
     def has(self, condition: Condition) -> bool:
         return self.conditions.has(condition)
+
+
+    def copy(self):
+        variable_of_interest: Condition = self.variable_of_interest
+        start: Quantity = self.start
+        end: Quantity = self.end
+        inc: Quantity = self.inc
+        conditions: ConditionSet = self.conditions.copy()
+
+        return ConditionRange(
+            variable_of_interest,
+            start,
+            end,
+            inc,
+            conditions
+        )

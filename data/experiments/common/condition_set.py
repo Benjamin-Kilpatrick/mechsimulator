@@ -59,3 +59,9 @@ class ConditionSet:
         """
         return list(self.condition_set.keys())
 
+
+    def copy(self):
+        cond_dict: Dict[Condition, Quantity] = {condition: quantity for condition, quantity in self.condition_set.items()}
+        condition_set = ConditionSet()
+        condition_set.condition_set = cond_dict
+        return condition_set

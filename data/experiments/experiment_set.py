@@ -1,4 +1,4 @@
-from typing import List, Set, Optional, Dict
+from typing import List, Set, Dict
 
 import numpy
 import pint
@@ -120,7 +120,7 @@ class ExperimentSet:
         source: DataSource = x_source if x_source is not None else self.x_source
         if source == DataSource.SIMULATION:
             num = int((
-                                  self.condition_range.end.magnitude - self.condition_range.start.magnitude) // self.condition_range.inc.magnitude)
+                              self.condition_range.end.magnitude - self.condition_range.start.magnitude) // self.condition_range.inc.magnitude)
             return numpy.linspace(self.condition_range.start, self.condition_range.end, num, endpoint=True)
         if source == DataSource.MEASURED:
             condition_variable_range: List[Quantity] = []
@@ -161,3 +161,31 @@ class ExperimentSet:
 
     def has(self, condition: Condition) -> bool:
         return self.condition_range.has(condition)
+
+    def copy(self):
+        metadata: MetaData = self.metadata
+        calculation_type: CalculationType = self.calculation_type
+        x_source: DataSource = self.x_source
+        condition_source: DataSource = self.condition_source
+        condition_range: ConditionRange = self.condition_range.copy()
+        reaction: Reaction = self.reaction
+        measurement: Measurement = self.measurement
+        simulated_species: List[Species] = [spc.copy() for spc in self.simulated_species]
+        simulated_mixture: Dict[MixtureType, Mixture] = {mix_type: mixture.copy() for mix_type, mixture in
+                                                         self.simulated_mixture}
+        measured_experiments: List[Experiment] = [exp.copy() for exp in self.measured_experiments]
+        targets: TargetSpecies = self.targets.copy()
+
+        return ExperimentSet(
+            metadata,
+            calculation_type,
+            x_source,
+            condition_source,
+            condition_range,
+            reaction,
+            measurement,
+            simulated_species,
+            simulated_mixture,
+            measured_experiments,
+            targets
+        )
