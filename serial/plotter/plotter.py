@@ -4,6 +4,8 @@ from typing import List, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter as Formatter
 import matplotlib.backends.backend_pdf as plt_pdf
 #from rdkit.Contrib.LEF.AddLabels import labels
@@ -18,6 +20,7 @@ from data.experiments.measurement import Measurement
 from data.experiments.reaction import Reaction
 from data.job.job import Job
 from data.mechanism.mechanism import Mechanism
+from data.mechanism.species import Species
 from serial.plotter import plotter_main, plotter_util, outcome
 from serial.plotter.outcome import build_figs_axes, _mech_frmt, single_mech
 
@@ -101,7 +104,8 @@ class PlotterFormat:
         self.plot_points:bool = True
         self.xunit = None
         self.yunit = None
-        self.ylimit = None
+        self.ylimit = [0.0, 0.0055] # TODO! where did this come from
+        self.xlimit = None
         self.omit_targs = None
         self.exp_on_top = True
         self.rows = 4
@@ -111,6 +115,9 @@ class PlotterFormat:
         self.exp_color = 'black'
         self.xscale = 'linear'
         self.yscale = 'linear'
+
+    def get_num_plots_per_page(self) -> int:
+        return self.rows * self.cols
 
 class PlotterLine(ABC):
     @abstractmethod
@@ -184,9 +191,59 @@ class MeasuredConditionLine(PlotterLine):
         return np.asarray(data)
 
 
+class SpeciesExperimentLine(PlotterLine):
+
+    def __init__(self, spc: Species, experiment_set: ExperimentSet):
+        self.experiment_set = experiment_set
+        self.spc = spc
+
+    def get_label(self):
+        return "Ur mom"
+
+    def get_color(self):
+        return "red"
+
+    def get_linestyle(self):
+        return "-"
+
+    def get_marker(self):
+        return 1.0
+
+    def get_zorder(self):
+        return None
+
+    def get_xdata(self):
+        return np.asarray([])
+
+    def get_ydata(self) -> np.ndarray:
+        return np.asarray([])
+
+
+class PlotterFigureAxesIterator:
+    """
+    This is an iterator class that gives the properly indexed list of axes such that each axis falls on the correct
+    location in the grid.
+    """
+    def __init__(self, fig, plot_format: PlotterFormat):
+        self.fig = fig
+        self.rows = plot_format.rows
+        self.cols = plot_format.cols
+
+        # state
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        axis: Axes = self.fig.add_subplot(self.rows, self.cols, self.index + 1)
+        self.index += 1
+        return axis
+
+
 class PlotterSubplot:
-    def __init__(self, ax, lines: List[PlotterLine]):
-        self.ax = ax
+    def __init__(self, ax: Axes, lines: List[PlotterLine]):
+        self.ax: Axes = ax
         self.lines: List[PlotterLine] = lines
 
     def plot(self):
@@ -194,23 +251,54 @@ class PlotterSubplot:
             line.plot(self.ax)
 
     @staticmethod
-    def load_from_experiment_set(experiment_set: ExperimentSet, fig):
-        lines = []
-        if len(experiment_set.measured_experiments) > 0:
-            conditions = experiment_set.measured_experiments[0].conditions
-            for condition in conditions.get_conditions():
+    def load_measured_from_experiment_set(experiment_set: ExperimentSet, fig: Figure, axes_iterator:PlotterFigureAxesIterator) -> list:
+        subplots = []
+        # load measured experiments
+        # if len(experiment_set.measured_experiments) > 0:
+        #     conditions = experiment_set.measured_experiments[0].conditions
+        #     for condition in conditions.get_conditions():
+        #
+        #         lines.append(MeasuredConditionLine(condition, experiment_set))
+        # axis = fig.add_subplot(1, 1, 0 + 1)
+        return subplots
 
-                lines.append(MeasuredConditionLine(condition, experiment_set))
-        axis = fig.add_subplot(1, 1, 0 + 1)
-        return PlotterSubplot(axis, lines)
+class PlotterSpeciesSubplot(PlotterSubplot):
+    def __init__(self, ax: Axes, spc: Species, experiment_set: ExperimentSet, plot_format: PlotterFormat):
+        lines = [SpeciesExperimentLine(spc, experiment_set)]
+        super().__init__(ax, lines)
+        self.spc = spc
+
+        # set ax info
+        self.ax.set_title(self.spc.name)
+        self.ax.set_xscale(plot_format.xscale)
+        self.ax.set_yscale(plot_format.yscale)
+        if plot_format.ylimit is not None:
+            self.ax.set_ylim(plot_format.ylimit)
+        if plot_format.xlimit is not None:
+            self.ax.set_xlim(plot_format.xlimit)
+
+    @staticmethod
+    def load_from_experiment_set(experiment_set: ExperimentSet, fig: Figure, plot_format: PlotterFormat, axes_iterator:PlotterFigureAxesIterator) -> list:
+        subplots = []
+        # load spc data
+
+        for spc in experiment_set.simulated_species:
+            axis: Axes = axes_iterator.__next__()
+            subplots.append(PlotterSpeciesSubplot(axis, spc, experiment_set, plot_format))
+
+        return subplots
 
 class PlotterFigure: # Called plot in o.g.
-    def __init__(self, experiment_set: ExperimentSet):
+    def __init__(self, experiment_set: ExperimentSet, plot_format: PlotterFormat):
         self.fig = plt.figure(figsize=(8.5, 11))
         self.subplots = []
+        self.plot_format = plot_format
+        self.axes_iterator = PlotterFigureAxesIterator(self.fig, self.plot_format)
 
         # do this for every subplot
-        self.subplots.append(PlotterSubplot.load_from_experiment_set(experiment_set, self.fig))
+        self.subplots.extend(PlotterSubplot.load_measured_from_experiment_set(experiment_set, self.fig, self.axes_iterator))
+        self.subplots.extend(PlotterSpeciesSubplot.load_from_experiment_set(experiment_set, self.fig, self.plot_format, self.axes_iterator))
+
 
     def plot(self):
         for subplot in self.subplots:
@@ -219,12 +307,13 @@ class PlotterFigure: # Called plot in o.g.
 
 
 
+
 class Plot:
     def __init__(self, job: Job):
-        self.format = PlotterFormat()
+        self.plot_format = PlotterFormat()
         self.figures: List[PlotterFigure] = []
         for experiment_set in job.experiment_files:
-            self.figures.append(PlotterFigure(experiment_set))
+            self.figures.append(PlotterFigure(experiment_set, self.plot_format))
 
     def plot(self, filename, path):
         for figure in self.figures:
