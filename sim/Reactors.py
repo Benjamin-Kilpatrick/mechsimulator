@@ -1,3 +1,5 @@
+from typing import Dict
+
 import cantera
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -332,7 +334,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def const_t_p(temp: Quantity, pressure: Quantity, mix, gas, targ_species, end_time):
+    def const_t_p(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time):
         """
         Runs a constant-temperature, constant-pressure 0-D simulation
 
@@ -382,7 +384,7 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def free_flame(temp: Quantity, pressure: Quantity, mix, gas, targ_species, phi, previous_solution=None):
+    def free_flame(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, phi, previous_solution=None):
         """
         Runs an adiabatic, 1-D, freely propagating flame simulation
         TODO: NOTE: need to add options for simulation details
@@ -434,13 +436,13 @@ class Reactors:
         return targ_concs, pos, vels, temps
 
     @staticmethod
-    def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix):
-        new_mix = SimulatorUtils.convert_gas_mixture(mix)
+    def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
+        new_mix = SimulatorUtils.convert_gas_mixture(mix[MixtureType.GAS_MIXTURE])
         gas.TPX = temp, pressure, new_mix
         return gas
 
     @staticmethod
-    def set_fuel_state(gas, temp: Quantity, pressure: Quantity, mix: Mixture, phi):
+    def set_fuel_state(gas: cantera.Solution, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], phi):
         """
 
         :param gas:
@@ -452,11 +454,7 @@ class Reactors:
         """
 
         # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
-        fuel_mixture = mix.species['']
-        oxidized_mixture = mix.species['']
-        fuel, oxid = SimulatorUtils.convert_fuel_mixture(fuel_mixture, oxidized_mixture)
+        fuel, oxid = SimulatorUtils.convert_fuel_mixture(mix[MixtureType.FUEL_MIXTURE], mix[MixtureType.OXIDIZER_MIXTURE])
         gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
         gas.TP = temp, pressure
-
-        # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
         return gas
