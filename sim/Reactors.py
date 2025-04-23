@@ -7,6 +7,7 @@ from SimulatorUtils import SimulatorUtils
 
 from data.experiments.mixture import Mixture
 from data.experiments.mixture_type import MixtureType
+from data.mechanism.mechanism import Mechanism
 
 
 # used ---- to split functions for my own view for now, so i know where functions are that were inside of other functions
@@ -439,7 +440,7 @@ class Reactors:
         return gas
 
     @staticmethod
-    def set_fuel_state(gas, temp: Quantity, pressure: Quantity, mix, phi):
+    def set_fuel_state(gas, temp: Quantity, pressure: Quantity, mix: Mixture, phi):
         """
 
         :param gas:
@@ -450,39 +451,12 @@ class Reactors:
         :return:
         """
 
-        # if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
-        # fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
-        #             oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
         # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
-        if isinstance(mix, dict) and 'fuel' in mix:  # if mix defined using phi
-            # Create string for fuel species
-            fuel = ''
-            nfuels = len(mix['fuel'])
-            for idx in range(nfuels):
-                spc = mix['fuel'][idx]
-                if nfuels > 1:
-                    ratio = mix['fuel_ratios'][0][idx]
-                    fuel += f'{spc}: {ratio}'
-                    if idx + 1 < nfuels:  # if not on last spc, add a comma
-                        fuel += ', '
-                else:
-                    fuel += spc
-            # Create string for oxidizer species
-            oxid = ''
-            noxids = len(mix['oxid'])
-            for idx in range(noxids):
-                spc = mix['oxid'][idx]
-                if noxids > 1:
-                    ratio = mix['oxid_ratios'][0][idx]
-                    oxid += f'{spc}: {ratio}'
-                    if idx + 1 < noxids:  # if not on last spc, add a comma
-                        oxid += ', '
-                else:
-                    oxid += spc
-
-            phi = mix['phi']
-            gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
-            gas.TP = temp, pressure
+        fuel_mixture = mix.species['']
+        oxidized_mixture = mix.species['']
+        fuel, oxid = SimulatorUtils.convert_fuel_mixture(fuel_mixture, oxidized_mixture)
+        gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
+        gas.TP = temp, pressure
 
         # TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
         return gas
