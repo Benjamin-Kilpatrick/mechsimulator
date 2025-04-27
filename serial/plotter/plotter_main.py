@@ -128,7 +128,7 @@ def single_set(exp_set, gases, mech_spc_dcts, calc_type, x_src,
         #writer.new_sens.mult_mechs(sorted_set_sens, sorted_set_rxns, targs,
         #                           set_xdata, set_ref_results)
 
-    elif calc_type == 'pathways':
+    elif calc_type == ('pathways'):
         # Obtain the end states of each simulation; has shape (nmechs, nconds)
         set_end_tpx, set_xdata = sim.old.simulator_main.single_set(
             exp_set, gases, mech_spc_dcts, 'pathways', x_src, cond_src,

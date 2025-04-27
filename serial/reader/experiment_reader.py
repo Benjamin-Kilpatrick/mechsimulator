@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Tuple
 
 import numpy
 import pandas
+import pint
 from pandas import DataFrame
 from pint import Quantity
 
@@ -16,11 +17,12 @@ from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.experiments.metadata import MetaData
+from data.experiments.mixture import Mixture
+from data.experiments.mixture_type import MixtureType
 from data.experiments.reaction import Reaction
 from data.experiments.results import Results
 from data.experiments.target_species import TargetSpecies
 from data.mechanism.species import Species
-from data.mixtures.compound import Compound
 from serial.common.env_path import EnvPath
 from serial.common.file_type import FileType
 from serial.common.utils import Utils
@@ -167,12 +169,10 @@ class ExperimentReader:
 
         # species and compounds parsed from experiment sheet
         simulated_species: List[Species] = ExperimentReader.parse_species_excel(info_dict['spc'])
-        simulated_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(info_dict['mix'],
-                                                                                     simulated_species)
-
+        simulated_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(info_dict['mix'],
+                                                                           simulated_species)
 
         measured_experiments: List[Experiment] = []
-
 
         targets: TargetSpecies = TargetSpecies()
 
@@ -188,7 +188,9 @@ class ExperimentReader:
 
             # conditions and compounds
             exp_conditions: ConditionSet = ExperimentReader.read_all_conditions_excel(exp_dict['conds'])
-            exp_compounds: List[Compound] = ExperimentReader.parse_compounds_excel(exp_dict['mix'], simulated_species)
+            exp_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(exp_dict['mix'], simulated_species)
+            if 'phi' in exp_dict['mix']:
+                exp_conditions.set(Condition.PHI, UnitParser.parse('phi', 1.0, ''))
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
                 result_dict = exp_dict['result'][result_name]
@@ -211,7 +213,7 @@ class ExperimentReader:
             measured_experiments.append(
                 Experiment(
                     exp_conditions,
-                    exp_compounds,
+                    exp_mixture,
                     results
                 )
             )
@@ -225,7 +227,7 @@ class ExperimentReader:
             reaction,
             measurement,
             simulated_species,
-            simulated_compounds,
+            simulated_mixture,
             measured_experiments,
             targets
         )
@@ -263,8 +265,6 @@ class ExperimentReader:
         if 'fuel' in data['mix']:
             targets.add_special_target(Target.FUEL, targets.get_species_by_name(data['mix']['fuel']))
 
-
-
     @staticmethod
     def parse_species_excel(data: Dict[str, Any]) -> List[Species]:
         """
@@ -289,84 +289,94 @@ class ExperimentReader:
         return species
 
     @staticmethod
-    def parse_compounds_excel(data: Dict[str, Any], species: List[Species]) -> List[Compound]:
+    def parse_mixtures_excel(data: Dict[str, Any], species: List[Species]) -> Dict[MixtureType, Mixture]:
         """
         Parse compound data
         :param data: dictionary of mixtures from the info sheet
         :param species: list of all species
-        :return: list of compounds
+        :return: dictionary of mixtures
         """
-        species_lookup: Dict[str, Species] = {}
-        for spc in species:
-            species_lookup[spc.name] = spc
+        mixtures: Dict[MixtureType, Mixture] = {}
+        unit = pint.UnitRegistry().Quantity(1, '')
 
-        compounds: List[Compound] = []
-        compound_name: str
-        for compound_name in data.keys():
-            compound_dict: Dict[str, Any] = data[compound_name]
-            compound_quantity = compound_dict['value']
-            value: Value
-            if 'bounds' in compound_dict:
-                # TODO properly parse bounds and type
-                bounds = compound_dict['bounds']
-                bounds_type = compound_dict['bounds_type']
-                value = Value(compound_quantity, bounds[0], bounds[1])
-            else:
-                value = Value(compound_quantity, compound_quantity, compound_quantity)
+        if 'fuel' in data:
+            mixtures[MixtureType.FUEL_MIXTURE] = Mixture()
+            mixtures[MixtureType.OXIDIZER_MIXTURE] = Mixture()
+            fuels: List[str] = [item.strip() for item in data['fuel']['value'].split(',')]
+            fuels_ratios: List[Quantity] = [unit]
+            oxidizers: List[str] = [item.strip() for item in data['oxid']['value'].split(',')]
+            oxidizer_ratios: List[Quantity] = [unit*float(item.strip()) for item in data['oxid_ratios']['value'].split(',')]
 
-            compounds.append(
-                Compound(
-                    species_lookup[compound_name],
-                    value,
-                    compound_quantity == 'bal'
-                )
-            )
+            if len(fuels) > 1:
+                fuels_ratios = [unit*float(item.strip()) for item in data['fuel_ratios']['value'].split(',')]
 
-        return compounds
+            for i in range(len(fuels)):
+                spc: Species = list(filter(lambda s: fuels[i] == s.name, species))[0]
+                mixtures[MixtureType.FUEL_MIXTURE].add_species(spc, fuels_ratios[i])
+
+            for i in range(len(oxidizers)):
+                spc: Species = list(filter(lambda s: oxidizers[i] == s.name, species))[0]
+                mixtures[MixtureType.OXIDIZER_MIXTURE].add_species(spc, oxidizer_ratios[i])
+
+        else:
+            mixtures[MixtureType.GAS_MIXTURE] = Mixture()
+            spc: Species
+            for spc in species:
+                if spc.name in data:
+                    mix_dict: Dict[str, Any] = data[spc.name]
+                    mixture_quantity = mix_dict['value']
+                    mixture_units = mix_dict['units']
+
+                    # TODO take bounds into account
+
+                    if mixture_quantity == 'bal':
+                        mixtures[MixtureType.GAS_MIXTURE].add_balanced_species(spc)
+                    else:
+                        mixtures[MixtureType.GAS_MIXTURE].add_species(spc, UnitParser.parse('concentration', mixture_quantity, mixture_units))
+
+
+        return mixtures
 
     @staticmethod
-    def get_variable_excel(variable: Condition, data: Dict[str, Any], require: bool) -> Tuple[Any, float]:
+    def get_variable_excel(condition: Condition, data: Dict[str, Any], require: bool) -> Tuple[Any, float]:
         """
         Get a variable from the excel data, correctly parse if it is scalar or array type, and throw an exception
         if the variable is required and not found
-        :param variable: the type of variable
+        :param condition: the type of variable
         :param data: dictionary of data from an experiment Excel file
         :param require: whether the variable is required
         :return: scalar/array, or None if the value is optional and not found
         :exception: if variable is not found and require is True
         """
-        variable_name: str = Utils.convert_variable_excel_str(variable)
-        if variable_name in data:
-            var_data: Dict = data[variable_name]
+        condition_name: str = Utils.convert_variable_excel_str(condition)
+        if condition_name in data:
+            condition_data: Dict = data[condition_name]
 
-            # variable == Condition.TARGET_SPECIES or \
-            if variable == Condition.TIME_STEP or \
-                    variable == Condition.END_TIME or \
-                    variable == Condition.WAVELENGTH or \
-                    variable == Condition.ABS_COEFFICIENT or \
-                    variable == Condition.PATH_LENGTH or \
-                    variable == Condition.IGNITION_DELAY_METHOD or \
-                    variable == Condition.TEMPERATURE or \
-                    variable == Condition.PRESSURE or \
-                    variable == Condition.LENGTH or \
-                    variable == Condition.RES_TIME or \
-                    variable == Condition.MDOT or \
-                    variable == Condition.AREA:
-                return var_data['value'], var_data['units']
-            elif variable == Condition.PHI:
-                # TODO implement parsing phi
-                raise NotImplementedError()
-            elif variable == Condition.DPDT or \
-                    variable == Condition.TIME or \
-                    variable == Condition.V_OF_T or \
-                    variable == Condition.X_PROFILE or \
-                    variable == Condition.TIME_PROFILE_SETPOINTS:
-                return numpy.asarray([float(i) for i in var_data['other']]), var_data['units']
-            elif variable == Condition.TIME_PROFILE:
-                return numpy.asarray([float(i) for i in var_data[0]['other']]), var_data[0]['units']
+            if condition == Condition.TIME_STEP or \
+                    condition == Condition.END_TIME or \
+                    condition == Condition.WAVELENGTH or \
+                    condition == Condition.ABS_COEFFICIENT or \
+                    condition == Condition.PATH_LENGTH or \
+                    condition == Condition.IGNITION_DELAY_METHOD or \
+                    condition == Condition.TEMPERATURE or \
+                    condition == Condition.PRESSURE or \
+                    condition == Condition.PHI or \
+                    condition == Condition.LENGTH or \
+                    condition == Condition.RES_TIME or \
+                    condition == Condition.MDOT or \
+                    condition == Condition.AREA:
+                return condition_data['value'], condition_data['units']
+            elif condition == Condition.DPDT or \
+                    condition == Condition.TIME or \
+                    condition == Condition.V_OF_T or \
+                    condition == Condition.X_PROFILE or \
+                    condition == Condition.TIME_PROFILE_SETPOINTS:
+                return numpy.asarray([float(i) for i in condition_data['other']]), condition_data['units']
+            elif condition == Condition.TIME_PROFILE:
+                return numpy.asarray([float(i) for i in condition_data[0]['other']]), condition_data[0]['units']
 
         elif require:
-            raise KeyError(f"Missing required variable: {variable.name}")
+            raise KeyError(f"Missing required variable: {condition.name}")
         # return a none type if the value is optional and not found
         return None, None
 
@@ -409,20 +419,20 @@ class ExperimentReader:
         variable_set: ConditionSet = ConditionSet()
 
         if variable != Condition.TEMPERATURE:
-            temperature: float = UnitParser.parse(
+            temperature: Quantity = UnitParser.parse(
                 'temperature',
                 *ExperimentReader.get_variable_excel(Condition.TEMPERATURE, data, True)
             )
             variable_set.set(Condition.TEMPERATURE, temperature)
         elif variable != Condition.PRESSURE:
-            pressure: float = UnitParser.parse(
+            pressure: Quantity = UnitParser.parse(
                 'pressure',
                 *ExperimentReader.get_variable_excel(Condition.PRESSURE, data, True)
             )
             variable_set.set(Condition.PRESSURE, pressure)
 
         if reaction == Reaction.SHOCKTUBE:
-            end_time: float = UnitParser.parse(
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
@@ -434,21 +444,21 @@ class ExperimentReader:
             variable_set.set(Condition.END_TIME, end_time)
             variable_set.set(Condition.DPDT, dpdt)
         elif reaction == Reaction.PLUG_FLOW_REACTOR:
-            length: float = UnitParser.parse(
+            length: Quantity = UnitParser.parse(
                 'length',
                 *ExperimentReader.get_variable_excel(Condition.LENGTH, data, True)
             )
-            res_time: float = UnitParser.parse(
+            res_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.RES_TIME, data, False)
             )
-            mdot: float = UnitParser.parse(
+            mdot: Quantity = UnitParser.parse(
                 'mdot',
                 *ExperimentReader.get_variable_excel(Condition.MDOT, data, False)
             )
             if res_time is None and mdot is None:
                 raise RuntimeError('Either mdot or res time are required for plug flow reactor')
-            area: float = UnitParser.parse(
+            area: Quantity = UnitParser.parse(
                 'area',
                 *ExperimentReader.get_variable_excel(Condition.AREA, data, True)
             )
@@ -471,15 +481,15 @@ class ExperimentReader:
             variable_set.set(Condition.TIME_PROFILE, t_profile)
             variable_set.set(Condition.TIME_PROFILE_SETPOINTS, t_profile_setpoints)
         elif reaction == Reaction.JET_STREAM_REACTOR:
-            volume: float = UnitParser.parse(
+            volume: Quantity = UnitParser.parse(
                 'volume',
                 *ExperimentReader.get_variable_excel(Condition.VOLUME, data, True)
             )
-            res_time: float = UnitParser.parse(
+            res_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.RES_TIME, data, False)
             )
-            mdot: float = UnitParser.parse(
+            mdot: Quantity = UnitParser.parse(
                 'mdot',
                 *ExperimentReader.get_variable_excel(Condition.MDOT, data, False)
             )
@@ -490,7 +500,7 @@ class ExperimentReader:
             variable_set.set(Condition.RES_TIME, res_time)
             variable_set.set(Condition.MDOT, mdot)
         elif reaction == Reaction.RAPID_COMPRESSION_MACHINE:
-            end_time: float = UnitParser.parse(
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
@@ -507,7 +517,7 @@ class ExperimentReader:
             variable_set.set(Condition.TIME, time)
             variable_set.set(Condition.V_OF_T, v_of_t)
         elif reaction == Reaction.CONST_T_P:
-            end_time: float = UnitParser.parse(
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
@@ -515,26 +525,24 @@ class ExperimentReader:
             variable_set.set(Condition.END_TIME, end_time)
         elif reaction == Reaction.FREE_FLAME:
             if variable != Condition.PHI:
-                pass
-                # TODO! Marcello said to remove Phi
-                # phi: Phi = UnitParser.parse(
-                #     'phi',
-                #     *ExperimentReader.get_variable_excel(Condition.PHI, data, False)
-                # )
-                # variable_set.set(Condition.PHI, phi)
+                phi: Quantity = UnitParser.parse(
+                    'phi',
+                    *ExperimentReader.get_variable_excel(Condition.PHI, data, False)
+                )
+                variable_set.set(Condition.PHI, phi)
         else:
             raise NotImplementedError(f"Reaction {reaction.name} is not implemented")
 
         if measurement == Measurement.ABSORPTION or measurement == Measurement.EMISSION:
-            time_step: float = UnitParser.parse(
+            time_step: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.TIME_STEP, data, True)
             )
-            end_time: float = UnitParser.parse(
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
-            wavelength: float = UnitParser.parse(
+            wavelength: Quantity = UnitParser.parse(
                 'length',
                 *ExperimentReader.get_variable_excel(Condition.WAVELENGTH, data, True)
             )
@@ -543,8 +551,8 @@ class ExperimentReader:
             variable_set.set(Condition.WAVELENGTH, wavelength)
         elif measurement == Measurement.IGNITION_DELAY_TIME:
             ignition_delay_method: str = \
-            ExperimentReader.get_variable_excel(Condition.IGNITION_DELAY_METHOD, data, True)[0]
-            end_time: float = UnitParser.parse(
+                ExperimentReader.get_variable_excel(Condition.IGNITION_DELAY_METHOD, data, True)[0]
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
@@ -554,21 +562,21 @@ class ExperimentReader:
         elif measurement == Measurement.OUTLET:
             pass
         elif measurement == Measurement.ION or measurement == Measurement.PRESSURE or measurement == Measurement.CONCENTRATION:
-            time_step: float = UnitParser.parse(
+            time_step: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.TIME_STEP, data, True)
             )
-            end_time: float = UnitParser.parse(
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
 
             variable_set.set(Condition.TIME_STEP, time_step)
             variable_set.set(Condition.END_TIME, end_time)
-        elif measurement == Measurement.LFS:
+        elif measurement == Measurement.LAMINAR_FLAME_SPEED:
             pass
         elif measurement == Measurement.HALF_LIFE:
-            end_time: float = UnitParser.parse(
+            end_time: Quantity = UnitParser.parse(
                 'time',
                 *ExperimentReader.get_variable_excel(Condition.END_TIME, data, True)
             )
@@ -578,4 +586,3 @@ class ExperimentReader:
             raise NotImplementedError(f"Measurement {measurement.name} is not implemented")
 
         return variable_set
-

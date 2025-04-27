@@ -9,6 +9,7 @@ import sys
 from dotenv import load_dotenv
 
 from data.experiments.common.data_source import DataSource
+from main import main
 from serial.reader.job_reader import JobReader
 from serial.writer.ExperimentWriter import ExperimentWriter
 
@@ -16,7 +17,7 @@ from serial.writer.ExperimentWriter import ExperimentWriter
 print(os.getcwd())
 JOB_FILES = sys.argv[1:]
 main.run_jobs(JOB_FILES)"""
-
+"""
 
 def test():
     print('hi')
@@ -33,7 +34,7 @@ def main():
                                     experiment_file)
         idx += 1
 
-    print(job)
+    print(job)"""
 
 
 main()

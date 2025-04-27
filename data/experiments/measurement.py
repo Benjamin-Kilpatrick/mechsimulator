@@ -21,7 +21,7 @@ class Measurement(Enum):
     CONCENTRATION = 6
     """concentration"""
     # TODO get the actual name
-    LFS = 7
+    LAMINAR_FLAME_SPEED = 7
     """LFS"""
     HALF_LIFE = 8
     """half life"""
