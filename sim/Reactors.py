@@ -5,11 +5,10 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 import cantera as Cantera
 from pint import Quantity
-from SimulatorUtils import SimulatorUtils
 
 from data.experiments.mixture import Mixture
 from data.experiments.mixture_type import MixtureType
-from data.mechanism.mechanism import Mechanism
+from sim.SimulatorUtils import SimulatorUtils
 
 
 # used ---- to split functions for my own view for now, so i know where functions are that were inside of other functions
@@ -37,8 +36,6 @@ class Reactors:
             3. temps - Solution temperatures
             4. times - Solution times
         """
-        #todo-t: specify the Mixture?
-        temp = temp()
         gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         if press_of_time is None:
@@ -78,7 +75,7 @@ class Reactors:
         time = 0
         states = Cantera.SolutionArray(gas, extra=['t'])
         states.append(reaction.thermo.state, t=time)
-        while time < np.min([end_time, velocity_of_time[0, -1]]):
+        while time < np.min([end_time.magnitude, velocity_of_time[0, -1]]):
             time = network.step()
             states.append(reaction.thermo.state, t=time)
 
@@ -89,7 +86,7 @@ class Reactors:
         targ_concs = np.zeros((len(targ_species), len(times)))
         for ndx, targ_spc in enumerate(targ_species):
             if targ_spc is not None:
-                targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
+                targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc.name)]
             else:
                 targ_concs[ndx, :] = np.nan
 
@@ -193,11 +190,11 @@ class Reactors:
         # Set the initial gas state
         if x_profile is not None:  # use T profile if given
             # Create the 2D array
-            t_data = np.ndarray((len(x_profile[0]), len(t_profile_setpoints)))
+            t_data = np.ndarray((len(x_profile), len(t_profile_setpoints)))
             for ndx, array in enumerate(t_profile):
                 t_data[:, ndx] = array
             # Create the interp object and interp (note: the [0] gets rid of uncertainties)
-            interp = RegularGridInterpolator((x_profile[0], t_profile_setpoints), t_data)
+            interp = RegularGridInterpolator((x_profile, t_profile_setpoints), t_data)
             start_temp = interp((0, temp))
             gas = Reactors.set_gas_state(gas, start_temp, pressure, mix)
         else:  # otherwise, just use the given, fixed T
@@ -438,7 +435,7 @@ class Reactors:
     @staticmethod
     def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
         new_mix = SimulatorUtils.convert_gas_mixture(mix[MixtureType.GAS_MIXTURE])
-        gas.TPX = temp, pressure, new_mix
+        gas.TPX = temp.magnitude, pressure.magnitude, new_mix
         return gas
 
     @staticmethod

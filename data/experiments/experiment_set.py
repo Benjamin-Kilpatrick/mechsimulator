@@ -140,10 +140,10 @@ class ExperimentSet:
             num = end_time.magnitude // self.condition_range.get(Condition.TIME_STEP).magnitude
             return numpy.linspace(0, end_time, num, endpoint=True)
         if source == DataSource.MEASURED:
-            times: Set[Quantity] = set()
+            times: Set[float] = set()
             experiment: Experiment
             for experiment in self.measured_experiments:
-                times.update(experiment.results.get_variable(Condition.TIME)[0])
+                times.update(experiment.results.get_variable(Condition.TIME).to('seconds').magnitude)
 
             return numpy.asarray(sorted(list(times)))
 
@@ -172,7 +172,7 @@ class ExperimentSet:
         measurement: Measurement = self.measurement
         simulated_species: List[Species] = [spc.copy() for spc in self.simulated_species]
         simulated_mixture: Dict[MixtureType, Mixture] = {mix_type: mixture.copy() for mix_type, mixture in
-                                                         self.simulated_mixture}
+                                                         self.simulated_mixture.items()}
         measured_experiments: List[Experiment] = [exp.copy() for exp in self.measured_experiments]
         targets: TargetSpecies = self.targets.copy()
 
