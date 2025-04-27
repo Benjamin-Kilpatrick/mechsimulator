@@ -191,7 +191,7 @@ class MeasuredConditionLine(PlotterLine):
         return np.asarray(data)
 
 
-class SpeciesExperimentLine(PlotterLine):
+class OutletSpeciesExperimentLine(PlotterLine):
 
     def __init__(self, spc: Species, experiment_set: ExperimentSet):
         self.experiment_set = experiment_set
@@ -207,7 +207,7 @@ class SpeciesExperimentLine(PlotterLine):
         return ''
 
     def get_marker(self):
-        return 'o'
+        return '.'
 
     def get_zorder(self):
         return None
@@ -219,7 +219,7 @@ class SpeciesExperimentLine(PlotterLine):
         out = [experiment.results.target_results[self.spc.name] if self.spc.name in experiment.results.target_results else None for experiment in self.experiment_set.measured_experiments ]
         return np.asarray(out)
 
-class SpeciesSimulatedLine(PlotterLine):
+class OutletSpeciesSimulatedLine(PlotterLine):
     def __init__(self, spc: Species, experiment_set: ExperimentSet):
         self.experiment_set = experiment_set
         self.spc = spc
@@ -247,6 +247,7 @@ class SpeciesSimulatedLine(PlotterLine):
         return np.asarray([])
         #size = len(self.experiment_set.get_x_data(x_source=DataSource.SIMULATION)) # TODO! temp until actual data exists
         #return np.asarray([1.0] * size)
+
 
 class PlotterFigureAxesIterator:
     """
@@ -288,13 +289,13 @@ class PlotterSubplot:
         #     conditions = experiment_set.measured_experiments[0].conditions
         #     for condition in conditions.get_conditions():
         #
-        #         lines.append(MeasuredConditionLine(condition, experiment_set))
+        #         lines.append(OutletMeasuredConditionLine(condition, experiment_set))
         # axis = fig.add_subplot(1, 1, 0 + 1)
         return subplots
 
 class PlotterSpeciesSubplot(PlotterSubplot):
     def __init__(self, ax: Axes, spc: Species, experiment_set: ExperimentSet, plot_format: PlotterFormat):
-        lines = [SpeciesExperimentLine(spc, experiment_set), SpeciesSimulatedLine(spc, experiment_set)]
+        lines = [OutletSpeciesExperimentLine(spc, experiment_set), OutletSpeciesSimulatedLine(spc, experiment_set)]
         super().__init__(ax, lines, plot_format)
         self.spc = spc
 
@@ -320,21 +321,66 @@ class PlotterSpeciesSubplot(PlotterSubplot):
         return subplots
 
 class PlotterFigure: # Called plot in o.g.
-    def __init__(self, experiment_set: ExperimentSet, plot_format: PlotterFormat):
+
+    def __init__(self, job: Job, experiment_set: ExperimentSet, plot_format: PlotterFormat):
         self.fig = plt.figure(figsize=(8.5, 11))
         self.subplots = []
         self.plot_format = plot_format
         self.axes_iterator = PlotterFigureAxesIterator(self.fig, self.plot_format)
+        self.experiment_set = experiment_set
 
         # do this for every subplot
         self.subplots.extend(PlotterSubplot.load_measured_from_experiment_set(experiment_set, self.axes_iterator))
         self.subplots.extend(PlotterSpeciesSubplot.load_from_experiment_set(experiment_set, self.plot_format, self.axes_iterator))
 
+        PlotterFigure.add_headers_and_footers(job, self.experiment_set, self.fig)
+
     def plot(self):
         for subplot in self.subplots:
             subplot.plot()
 
+    @staticmethod
+    def add_headers_and_footers(job: Job, exp_set: ExperimentSet, fig: Figure):
+        """ Adds header and footer text to a figure
+        """
 
+        # Make some text describing the legends
+        header_x_positions = [0.06, 0.37, 0.68]
+        header_y_positions = [0.9, 0.92]
+
+        for mech_idx, mechanism in enumerate(job.mechanisms):
+            header = f'{COLORS[mech_idx % len(COLORS)]} lines: {mechanism.mechanism_name}'
+            if mech_idx < 3:  # three mechs per row
+                y_idx = 0
+            else:
+                y_idx = 1
+            plt.figtext(header_x_positions[mech_idx % 3], header_y_positions[y_idx],
+                        header, fontsize=12, color=COLORS[mech_idx % len(COLORS)])
+
+        # Make some text describing the experimental set
+        source = exp_set.metadata.source
+        description = exp_set.metadata.description
+        reac_type = REACTION_DISPLAY_NAMES[exp_set.reaction]
+        meas_type = MEASUREMENT_DISPLAY_NAMES[exp_set.measurement]
+        fig.text(0.01, 0.98, f'Source: {source}', fontsize=10)
+        fig.text(0.01, 0.96, f'Description: {description}', fontsize=10)
+        fig.text(0.77, 0.98, f'Reac. type: {reac_type}', fontsize=10)
+        fig.text(0.77, 0.96, f'Meas. type: {meas_type}', fontsize=10)
+
+        # TODO! figure out this stuff where to get the title and how pages work within a group
+        group_title = "Outlet concentrations" # grp_titles[grp_idx]
+        pg_idx = 0
+        pgs_per_grp = 1
+        title = f'{group_title}\n(pg. {pg_idx + 1} of {pgs_per_grp})'
+        fig.suptitle(title, y=0.99, fontsize=16)
+
+        # footers
+        ylabel = ""
+        xlabel = ""
+        footnote1 = f'Y-axis: {ylabel}\n'
+        footnote2 = f'X-axis: {xlabel}\n'
+        footnotes = footnote1 + footnote2
+        fig.text(0.11, 0.06, footnotes, fontsize=10, va="top", ha="left")
 
 
 
@@ -343,7 +389,7 @@ class Plot:
         self.plot_format = PlotterFormat()
         self.figures: List[PlotterFigure] = []
         for experiment_set in job.experiment_files:
-            self.figures.append(PlotterFigure(experiment_set, self.plot_format))
+            self.figures.append(PlotterFigure(job, experiment_set, self.plot_format))
 
     def plot(self, filename, path):
         for figure in self.figures:
