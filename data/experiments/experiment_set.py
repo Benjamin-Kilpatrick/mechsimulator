@@ -137,8 +137,8 @@ class ExperimentSet:
         source: DataSource = x_source if x_source is not None else self.x_source
         if source == DataSource.SIMULATION:
             end_time: Quantity = self.condition_range.get(Condition.END_TIME)
-            num = end_time.magnitude // self.condition_range.get(Condition.TIME_STEP).magnitude
-            return numpy.linspace(0, end_time, num, endpoint=True)
+            num = int(end_time.magnitude // self.condition_range.get(Condition.TIME_STEP).magnitude)
+            return numpy.linspace(0.0, end_time.magnitude, num, endpoint=True)
         if source == DataSource.MEASURED:
             times: Set[float] = set()
             experiment: Experiment
