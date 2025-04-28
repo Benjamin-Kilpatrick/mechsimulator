@@ -13,7 +13,7 @@ from sim.SensitivitySimulator import SensitivitySimulator
 
 class Simulator:
     outcome_simulator: OutcomeSimulator = OutcomeSimulator()
-    sensitivity_simulator: SensitivitySimulator = SensitivitySimulator()
+    sensitivity_simulator: SensitivitySimulator = SensitivitySimulator(outcome_simulator)
 
     @staticmethod
     def run_experiment_set(experiment_set: ExperimentSet, mechanisms: List[Mechanism]):
@@ -22,14 +22,18 @@ class Simulator:
                 Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
 
             elif experiment_set.calculation_type == CalculationType.SENSITIVITY:
-                Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
-                if experiment_set.reaction == Reaction.SHOCKTUBE:
+                previous_solutions = None
+                if SensitivitySimulator.requires_previous_solutions(experiment_set.reaction):
+                    previous_solutions = Simulator.sensitivity_simulator.get_previous_solutions(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
+                else:
+                    Simulator.outcome_simulator.simulate_experiments(experiment_set, experiment_set.all_simulated_experiments[0], mechanism)
                     # add epsilon to prevent divide by 0
-                    experiment_set.all_simulated_experiments[0] += numpy.finfo(float).eps
+                    if experiment_set.reaction == Reaction.SHOCKTUBE:
+                        experiment_set.all_simulated_experiments[0] += numpy.finfo(float).eps
                 for reaction_ndx, experiments in enumerate(experiment_set.all_simulated_experiments[1:]):
                     mechanism.solution.set_multiplier(1.0)  # Reset all multipliers to original values
                     mechanism.solution.set_multiplier(1 + SensitivitySimulator.FACTOR, reaction_ndx)
-                    Simulator.sensitivity_simulator.simulate_experiments(experiment_set, experiments, mechanism)
+                    Simulator.sensitivity_simulator.simulate_experiments(experiment_set, experiments, mechanism, previous_solutions)
 
             else:
                 raise NotImplementedError(f"{experiment_set.calculation_type} does not have a simulator associated with "

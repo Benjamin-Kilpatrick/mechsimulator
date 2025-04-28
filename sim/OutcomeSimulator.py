@@ -85,8 +85,7 @@ class OutcomeSimulator(ReactionSimulator):
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-    def jet_stream_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions=None,
-                           output_all=False):
+    def jet_stream_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions=None):
         # Make sure that the prev_soln array is the right size (if given)
         num_conditions = len(experiment_set.all_simulated_experiments[0])
         if previous_solutions is not None:
@@ -97,6 +96,10 @@ class OutcomeSimulator(ReactionSimulator):
         all_concentrations = np.ndarray((num_conditions, mechanism.solution.n_species))
 
         for exp_ndx, experiment in enumerate(experiments):
+            previous_concentrations = None
+            if previous_solutions is not None:
+                previous_concentrations = previous_solutions[exp_ndx]
+
             concentrations, previous_concentrations, end_gas = Reactors.jsr(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.RES_TIME),
@@ -105,7 +108,7 @@ class OutcomeSimulator(ReactionSimulator):
                 previous_concentrations=previous_concentrations
             )
 
-            if output_all:
+            if previous_solutions is None: # We're here to GET previous solutions
                 all_concentrations[exp_ndx, :] = previous_concentrations
 
             if experiment_set.calculation_type == CalculationType.PATHWAY:

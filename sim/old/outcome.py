@@ -98,10 +98,7 @@ def const_t_p(conds_dct, gas, meas_type, xdata, ydata_shape):
             end_gas, meas_type, xdata)
 
     return mech_ydata
-<<<<<<< HEAD
-=======
 
->>>>>>> 33ca838929da5f4011be12671991fdf073668b29
 def process_const_t_p(raw_concs, raw_pressures, raw_temps, raw_times, conds_dct,
                       cond_idx, end_gas, meas_type, uniform_times):
     if meas_type == 'conc':

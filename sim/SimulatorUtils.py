@@ -82,6 +82,9 @@ class SimulatorUtils:
 
     @staticmethod
     def raise_reaction_measurement_error(reaction: Reaction, measurement: Measurement):
+        """
+
+        """
         raise ValueError(f"{reaction} reactions are not equipped to calculate {measurement}")
 
     @staticmethod
