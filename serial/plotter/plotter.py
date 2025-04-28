@@ -344,7 +344,7 @@ class PlotterSpeciesSubplot(PlotterSubplot):
 
         return subplots
 
-class PlotterConcentrationSimulationLine(PlotterLine):
+class PlotterConcentrationMeasurementLine(PlotterLine):
 
     def __init__(self, spc: Species, experiment_set: ExperimentSet, condition_index):
         self.spc = spc
@@ -373,9 +373,41 @@ class PlotterConcentrationSimulationLine(PlotterLine):
         return self.experiment_set.measured_experiments[self.condition_index].results.target_results.get(self.spc.name)
 
 
+class PlotterConcentrationSimulatedLine(PlotterLine):
+
+    def __init__(self, spc: Species, experiment_set: ExperimentSet, condition_index):
+        self.spc = spc
+        self.experiment_set = experiment_set
+        self.condition_index = condition_index
+
+    def get_label(self):
+        return "Ur mom"
+
+    def get_color(self):
+        return "red"
+
+    def get_linestyle(self):
+        return '-'
+
+    def get_marker(self):
+        return '.'
+
+    def get_zorder(self):
+        return None
+
+    def get_xdata(self):
+        return self.experiment_set.get_x_data()
+
+    def get_ydata(self) -> np.ndarray:
+        return self.experiment_set.all_simulated_experiments[0][self.condition_index].results.target_results.get(self.spc.name)
+
+
 class PlotterConcentrationSubplot(PlotterSubplot):
     def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantity: Quantity):
-        lines = [PlotterConcentrationSimulationLine(spc, experiment_set, condition_index)]
+        lines = [
+            PlotterConcentrationMeasurementLine(spc, experiment_set, condition_index),
+            PlotterConcentrationSimulatedLine(spc, experiment_set, condition_index)
+        ]
         super().__init__(ax, lines, plot_format, spc)
         title = f"{quantity.magnitude} {quantity.units}"
         self.ax.set_title(title)
