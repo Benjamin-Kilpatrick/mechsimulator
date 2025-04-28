@@ -1,12 +1,14 @@
+from typing import Dict
+
 import cantera
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 import cantera as Cantera
-from typing import List, Dict
 from pint import Quantity
 
 from data.experiments.mixture import Mixture
 from data.experiments.mixture_type import MixtureType
+from sim.SimulatorUtils import SimulatorUtils
 
 
 # used ---- to split functions for my own view for now, so i know where functions are that were inside of other functions
@@ -16,22 +18,25 @@ from data.experiments.mixture_type import MixtureType
 class Reactors:
 
     @staticmethod
-    def st(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time, press_of_time=None):
+    def st(temp: Quantity, pressure: Quantity, mix, gas, targ_species, end_time, press_of_time=None):
         """
         Will run a shock tube simulation. The non-ideal pressure rise, dP/dt, and can be incorporated via an optional P(t) profile
         
         :param temp: the experiments condition temperature
         :param pressure: the experiments condition temperature
-        :param mix: The Mixture of gasses?
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial
+            species concentrations at reactor inlet
         :param gas: The Cantera mechanism object
         :param targ_species: a list of target species
         :param end_time: float, end time for the simulation, will end at the first of either this time or the max time in press_of_time
         :param press_of_time: numpy array of specified pressure vs time, set to None if no non-ideal effects are simulated.
-        :return: 
+        :return:
+            1. targ_concs - the target concentrations
+            2. pressures - Solution pressures
+            3. temps - Solution temperatures
+            4. times - Solution times
         """
-        #todo-t: specify the Mixture?
-        temp = temp()
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         if press_of_time is None:
             # Create an array of ones spanning from t=0 to t=end_time
@@ -56,14 +61,13 @@ class Reactors:
                 :param temp_time: individual time value (s)
                 :type temp_time: float
                 :return vel: velocity of the wall (m/s)
-                :rtype: float
             """
             dvdt = np.gradient(velocity_of_time[1, :], velocity_of_time[0, :])
             dxdt = dvdt / wall.area  # only for clarity (since A = 1 m^2)
             #todo-t: do I do quantity?
             vel = np.interp(temp_time, velocity_of_time[0, :], -1 * dxdt)
-
             return vel
+
         wall.set_velocity(wall_velocity)
         network = Cantera.ReactorNet([reaction])
 
@@ -71,7 +75,7 @@ class Reactors:
         time = 0
         states = Cantera.SolutionArray(gas, extra=['t'])
         states.append(reaction.thermo.state, t=time)
-        while time < np.min([end_time, velocity_of_time[0, -1]]):
+        while time < np.min([end_time.magnitude, velocity_of_time[0, -1]]):
             time = network.step()
             states.append(reaction.thermo.state, t=time)
 
@@ -82,7 +86,7 @@ class Reactors:
         targ_concs = np.zeros((len(targ_species), len(times)))
         for ndx, targ_spc in enumerate(targ_species):
             if targ_spc is not None:
-                targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
+                targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc.name)]
             else:
                 targ_concs[ndx, :] = np.nan
 
@@ -91,8 +95,26 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def rcm(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, end_time, velocity_of_time):
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+    def rcm(temp: Quantity, pressure: Quantity, mix, gas, targ_species, end_time, velocity_of_time):
+        """
+        Runs a rapid compression machine simulation, with compression and heat
+        loss incorporated via an input V(t) profile
+
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial
+            species concentrations at reactor inlet
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param targ_species: desired species concentrations
+        :param end_time: the ending time for the simulation (seconds)
+        :param velocity_of_time: specified volume (any units) vs time (s) profile
+            to account for both piston compression and heat loss
+        :return:
+            1. targ_concs - the target concentrations
+            2. pressures - Solution pressures
+            3. times - Solution times
+        """
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         print('inside reactions, rcm temp: ', temp)
         # Normalize the volume profile by the first value
@@ -108,6 +130,11 @@ class Reactors:
 
         @staticmethod
         def piston_velocity(temp_time):
+            """ Gets the piston velocity at some time based on v_of_t
+
+            :param time: individual time value (s)
+            :return vel: velocity of the piston (m/s)
+            """
             dvdt = np.gradient(velocity_of_time[1, :], velocity_of_time[0, :])
             dxdt = dvdt / piston.area  # only for clarity (since area = 1 m^2)
             vel = np.interp(temp_time, velocity_of_time[0, :], -1 * dxdt)
@@ -126,8 +153,8 @@ class Reactors:
         # Get results
         times = states.t
         pressures = states.P
-        targ_concs = np.zeros((len(targ_spcs), len(times)))
-        for ndx, targ_spc in enumerate(targ_spcs):
+        targ_concs = np.zeros((len(targ_species), len(times)))
+        for ndx, targ_spc in enumerate(targ_species):
             targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
 
         return targ_concs, pressures, times
@@ -136,19 +163,42 @@ class Reactors:
     # ---------------
     #todo-t: Change Quantity to condition? Again, mix List or single? how does list differ?
     @staticmethod
-    def pfr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
+    def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
+        """
+        
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial
+            species concentrations at reactor inlet
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param targ_species: desired species concentrations
+        :param mdot: reactor mass flow rate (kg/s)
+        :param area: reactor cross-sectional area (m^2)
+        :param length: reactor length (m)
+        :param res_time: reactor residence time (s), only given if mdot is None
+        :param n_steps:  approx. number of steps to take; used to guess timestep (note: will almost NEVER be the actual 
+            number of timesteps taken)
+        :param x_profile: array of the x_data
+        :param t_profile: array of the temperatures
+        :param t_profile_setpoints: #todo-t: WOUT IS DIS????
+        :return:
+            1. targ_concs - the target concentrations
+            2. pressures - Solution pressures
+            3. temps - Solution temperatures
+            4. times - Solution times
+        """
         # Set the initial gas state
         if x_profile is not None:  # use T profile if given
             # Create the 2D array
-            t_data = np.ndarray((len(x_profile[0]), len(t_profile_setpoints)))
+            t_data = np.ndarray((len(x_profile), len(t_profile_setpoints)))
             for ndx, array in enumerate(t_profile):
                 t_data[:, ndx] = array
             # Create the interp object and interp (note: the [0] gets rid of uncertainties)
-            interp = RegularGridInterpolator((x_profile[0], t_profile_setpoints), t_data)
+            interp = RegularGridInterpolator((x_profile, t_profile_setpoints), t_data)
             start_temp = interp((0, temp))
-            gas = Reactors.set_state(gas, start_temp, pressure, mix)
+            gas = Reactors.set_gas_state(gas, start_temp, pressure, mix)
         else:  # otherwise, just use the given, fixed T
-            gas = Reactors.set_state(gas, temp, pressure, mix)
+            gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         # Create reactor and reactor network
         reac = Cantera.IdealGasConstPressureReactor(gas)
@@ -204,12 +254,29 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def jsr(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, res_time, vol, mdot=None, previous_concentrations=None):
+    def jsr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, res_time, vol, mdot=None, previous_concentrations=None):
+        """
+        Runs a jet-stirred reactor simulation
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial
+            species concentrations at reactor inlet
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param targ_species: desired species concentrations
+        :param res_time: reactor residence time (s)
+        :param vol: volume of the reactor (m^3)
+        :param mdot: reactor mass flow rate (kg/s)
+        :param previous_concentrations: species concentrations from previous solution at a similar condition
+        :return:
+            1. targ_concs - the target concentrations
+            2. all_concs - all species concentrations from the previous solution
+            3. end_gas - the gas originally passed in
+        """
         #todo-t: took this out as the last param and made it a local variable
         max_iter = 30000
 
         # Note: must set gas with mix before creating reservoirs!
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
         inlet = Cantera.Reservoir(gas)
         exhaust = Cantera.Reservoir(gas)
 
@@ -218,7 +285,7 @@ class Reactors:
         if previous_concentrations is None:
             previous_concentrations_input = False
             previous_concentrations = mix
-        gas = Reactors.set_state(gas, temp, pressure, previous_concentrations)
+        gas = Reactors.set_gas_state(gas, temp, pressure, previous_concentrations)
         reac = Cantera.IdealGasReactor(gas, energy='off', volume=vol)
 
         # Set up devices
@@ -248,8 +315,8 @@ class Reactors:
                 all_concs = previous_concentrations
 
         # Get results for target species
-        targ_concs = np.zeros(len(targ_spcs))
-        for targ_ndx, targ_spc in enumerate(targ_spcs):
+        targ_concs = np.zeros(len(targ_species))
+        for targ_ndx, targ_spc in enumerate(targ_species):
             if failure:
                 targ_concs[targ_ndx] = None
             else:
@@ -264,11 +331,27 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def const_t_p(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, end_time):
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+    def const_t_p(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, end_time):
+        """
+        Runs a constant-temperature, constant-pressure 0-D simulation
+
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param targ_species: desired species concentrations
+        :param end_time: the ending time for the simulation (seconds)
+        :return:
+            1. targ_concs - the target concentrations
+            2. pressures - Solution pressures
+            3. temps - Solution temperatures
+            4. times - Solution times
+            5. end_gas - the gas originally passed in
+        """
+        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
 
         # Setting energy to 'off' holds T constant
-        reac = Cantera.IdealGasConstPressureReactor(gas, energy='off') # todo-t: the reaction? or reactor? same for rest of file, i.e. other functions
+        reac = Cantera.IdealGasConstPressureReactor(gas, energy='off')
         network = Cantera.ReactorNet([reac])
 
         # Run the simulation
@@ -276,16 +359,16 @@ class Reactors:
         states = Cantera.SolutionArray(gas, extra=['t'])
         states.append(reac.thermo.state, t=time)
         while time < end_time:
-            time = network.step() # todo-t: does this decrement?
+            time = network.step()
             states.append(reac.thermo.state, t=time)
 
         # Get results
         times = states.t
         pressures = states.P
         temps = states.T
-        targ_concs = np.zeros((len(targ_spcs), len(times)))
+        targ_concs = np.zeros((len(targ_species), len(times)))
 
-        for targ_ndx, targ_spc in enumerate(targ_spcs):
+        for targ_ndx, targ_spc in enumerate(targ_species):
             if targ_spc is not None:
                 targ_concs[targ_ndx, :] = states.X[:, gas.species_index(targ_spc)]
             else:
@@ -298,10 +381,28 @@ class Reactors:
     # ---------------
 
     @staticmethod
-    def free_flame(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_spcs, previous_solution=None):
+    def free_flame(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, phi, previous_solution=None):
+        """
+        Runs an adiabatic, 1-D, freely propagating flame simulation
+        TODO: NOTE: need to add options for simulation details
+
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param targ_species: desired species concentrations
+        :param previous_solution: temperature profile vs. position; first column is position, second is temperature
+        :param phi: ratio of the actual fuel-to-oxidizer ratio to the stoichiometric fuel-to-oxidizer ratio.
+
+        :return:
+            1. targ_concs - the target concentrations
+            2. pos - array of grid positions (m)
+            3. vels - gas velocities at each position (m/s)
+            4. temps - gas temperatures at each position (K)
+        """
 
         # initialize the data from Cantera
-        gas = Reactors.set_state(gas, temp, pressure, mix)
+        gas = Reactors.set_fuel_state(gas, temp, pressure, mix, phi)
         loglevel = 0 # TODO-t:what is the purpose of supressing output here?
         flame: cantera.FreeFlame = Cantera.FreeFlame(gas) # cantera returns a result here from this input
         flame.transport_model = 'Mix'
@@ -316,9 +417,9 @@ class Reactors:
             
         # Concentration target retrival
         num_points = np.shape(flame.X)[1]  # length of second dim is num_points
-        targ_concs = np.ndarray((len(targ_spcs), num_points))
+        targ_concs = np.ndarray((len(targ_species), num_points))
 
-        for targ_ndx, targ_spc in enumerate(targ_spcs):
+        for targ_ndx, targ_spc in enumerate(targ_species):
             if targ_spc in gas.species_names:
                 targ_concs[targ_ndx] = flame.solution(targ_spc)
             else:  # if the targ_spc isn't in the mechanism
@@ -331,17 +432,36 @@ class Reactors:
 
         return targ_concs, pos, vels, temps
 
-    # ---------------
     @staticmethod
-    def set_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
-        #todo-t: delete conv?
-        pressure = pressure.to('pascal')
-        # issue, this new type of mix that has fuel and other stuff is so different we can't use it here.
-        # TODO-t: come back when you know what mix is
-        if MixtureType.FUEL_MIXTURE in mix and mix[MixtureType.FUEL_MIXTURE] is not None:
-            fuel_mixture = mix[MixtureType.FUEL_MIXTURE]
-            oxidized_mixture = mix[MixtureType.OXIDIZER_MIXTURE]
-        else:
-            mixture = mix[MixtureType.GAS_MIXTURE]
-# TODO-T: MARCELO HELP!! HELP ME MARCELO HELPP!!! OH GOD HELP!!
+    def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
+        """
+        Sets a gas mixture to a desired thermodynamic state
+
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
+        :return gas: Cantera Solution object
+        """
+        new_mix = SimulatorUtils.convert_gas_mixture(mix[MixtureType.GAS_MIXTURE])
+        gas.TPX = temp.magnitude, pressure.magnitude, new_mix
+        return gas
+
+    @staticmethod
+    def set_fuel_state(gas: cantera.Solution, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], phi):
+        """
+        Sets fuel and oxidizer mixtures to a desired thermodynamic state
+
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
+        :param phi: ratio of the actual fuel-to-oxidizer ratio to the stoichiometric fuel-to-oxidizer ratio.
+        :return Cantera Solution object
+        """
+
+        # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
+        fuel, oxid = SimulatorUtils.convert_fuel_mixture(mix[MixtureType.FUEL_MIXTURE], mix[MixtureType.OXIDIZER_MIXTURE])
+        gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
+        gas.TP = temp, pressure
         return gas

@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Tuple
 
 import numpy
 import pandas
+import pint
 from pandas import DataFrame
 from pint import Quantity
 
@@ -188,6 +189,8 @@ class ExperimentReader:
             # conditions and compounds
             exp_conditions: ConditionSet = ExperimentReader.read_all_conditions_excel(exp_dict['conds'])
             exp_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(exp_dict['mix'], simulated_species)
+            if 'phi' in exp_dict['mix']:
+                exp_conditions.set(Condition.PHI, UnitParser.parse('phi', 1.0, ''))
             results: Results = Results()
             for result_name in exp_dict['result'].keys():
                 result_dict = exp_dict['result'][result_name]
@@ -294,17 +297,18 @@ class ExperimentReader:
         :return: dictionary of mixtures
         """
         mixtures: Dict[MixtureType, Mixture] = {}
+        unit = pint.UnitRegistry().Quantity(1, '')
 
         if 'fuel' in data:
             mixtures[MixtureType.FUEL_MIXTURE] = Mixture()
             mixtures[MixtureType.OXIDIZER_MIXTURE] = Mixture()
             fuels: List[str] = [item.strip() for item in data['fuel']['value'].split(',')]
-            fuels_ratios: List[float] = [1.0]
+            fuels_ratios: List[Quantity] = [unit]
             oxidizers: List[str] = [item.strip() for item in data['oxid']['value'].split(',')]
-            oxidizer_ratios: List[float] = [float(item.strip()) for item in data['oxid_ratios']['value'].split(',')]
+            oxidizer_ratios: List[Quantity] = [unit*float(item.strip()) for item in data['oxid_ratios']['value'].split(',')]
 
             if len(fuels) > 1:
-                fuels_ratios = [float(item.strip()) for item in data['fuel_ratios']['value'].split(',')]
+                fuels_ratios = [unit*float(item.strip()) for item in data['fuel_ratios']['value'].split(',')]
 
             for i in range(len(fuels)):
                 spc: Species = list(filter(lambda s: fuels[i] == s.name, species))[0]

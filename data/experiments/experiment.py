@@ -65,3 +65,14 @@ class Experiment:
         if mixture_type in self.mixtures:
             return self.mixtures[mixture_type]
         raise Exception(f'{mixture_type.name} not found')
+
+    def copy(self):
+        conditions: ConditionSet = self.conditions.copy()
+        mixtures: Dict[MixtureType, Mixture] = self.mixtures.copy()
+        results: Results = self.results.copy()
+
+        return Experiment(
+            conditions,
+            mixtures,
+            results
+        )

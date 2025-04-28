@@ -63,3 +63,13 @@ class Results:
         :return: a list of all set targets
         """
         return list(self.target_results.keys())
+
+    def copy(self):
+        condition_results: ConditionSet = self.condition_results.copy()
+        target_results: Dict[str, Quantity] = self.target_results.copy()
+
+        results: Results = Results()
+        results.condition_results = condition_results
+        results.target_results = target_results
+
+        return results

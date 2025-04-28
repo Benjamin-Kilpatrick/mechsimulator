@@ -23,8 +23,8 @@ class OutcomeSimulator(ReactionSimulator):
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment_set.condition_range.conditions.get(Condition.END_TIME),
                 SimulatorUtils.generate_p_of_t(
-                    experiment_set.condition_range.conditions.get(Condition.END_TIME),
-                    experiment_set.condition_range.conditions.get(Condition.DPDT)
+                    experiment_set.condition_source,
+                    experiment
                 )
             )
 
@@ -168,7 +168,7 @@ class OutcomeSimulator(ReactionSimulator):
                 previous_solution = new_solution_list[exp_ndx - 1] if exp_ndx > 0 else None
 
             concentrations, positions, velocities, temps = Reactors.free_flame(
-                *self.get_basic_args(experiment_set, experiment, mechanism),
+                *self.get_basic_args(experiment_set, experiment, mechanism), experiment.conditions.get(Condition.PHI),
                 previous_solution=previous_solution
             )
             new_solution = np.vstack((positions / max(positions), temps))  # normalize position
@@ -274,10 +274,10 @@ class OutcomeSimulator(ReactionSimulator):
         return velocities[0] * 100
 
     def set_targets(self, experiment, targets: List[Species], mechanism, data):
-        for target in targets:
+        for idx, target in enumerate(targets):
             name = target.name
-            ndx = mechanism.solution.species_index(name)
-            experiment.results.set_target(name, data[ndx])
+            # ndx = mechanism.solution.species_index(name)
+            experiment.results.set_target(name, data[idx])
 
     def get_basic_args(self, experiment_set, experiment, mechanism):
         return experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE), experiment.mixtures, mechanism.solution, experiment_set.get_target_species(),
