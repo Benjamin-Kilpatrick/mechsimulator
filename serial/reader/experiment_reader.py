@@ -1,4 +1,5 @@
 import math
+import time
 from typing import Dict, Any, List, Tuple
 
 import numpy
@@ -169,8 +170,11 @@ class ExperimentReader:
 
         # species and compounds parsed from experiment sheet
         simulated_species: List[Species] = ExperimentReader.parse_species_excel(info_dict['spc'])
+
+        spc_dict: Dict[str, Species] = {spc.name: spc for spc in simulated_species}
+
         simulated_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(info_dict['mix'],
-                                                                           simulated_species)
+                                                                           spc_dict)
 
         measured_experiments: List[Experiment] = []
 
@@ -188,7 +192,7 @@ class ExperimentReader:
 
             # conditions and compounds
             exp_conditions: ConditionSet = ExperimentReader.read_all_conditions_excel(exp_dict['conds'])
-            exp_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(exp_dict['mix'], simulated_species)
+            exp_mixture: Dict[MixtureType, Mixture] = ExperimentReader.parse_mixtures_excel(exp_dict['mix'], spc_dict)
             if 'phi' in exp_dict['mix']:
                 exp_conditions.set(Condition.PHI, UnitParser.parse('phi', 1.0, ''))
             results: Results = Results()
@@ -289,7 +293,7 @@ class ExperimentReader:
         return species
 
     @staticmethod
-    def parse_mixtures_excel(data: Dict[str, Any], species: List[Species]) -> Dict[MixtureType, Mixture]:
+    def parse_mixtures_excel(data: Dict[str, Any], spc_dict: Dict[str, Species]) -> Dict[MixtureType, Mixture]:
         """
         Parse compound data
         :param data: dictionary of mixtures from the info sheet
@@ -297,43 +301,37 @@ class ExperimentReader:
         :return: dictionary of mixtures
         """
         mixtures: Dict[MixtureType, Mixture] = {}
-        unit = pint.UnitRegistry().Quantity(1, '')
 
         if 'fuel' in data:
             mixtures[MixtureType.FUEL_MIXTURE] = Mixture()
             mixtures[MixtureType.OXIDIZER_MIXTURE] = Mixture()
             fuels: List[str] = [item.strip() for item in data['fuel']['value'].split(',')]
-            fuels_ratios: List[Quantity] = [unit]
+            fuels_ratios: List[Quantity] = [1.0]
             oxidizers: List[str] = [item.strip() for item in data['oxid']['value'].split(',')]
-            oxidizer_ratios: List[Quantity] = [unit*float(item.strip()) for item in data['oxid_ratios']['value'].split(',')]
+            oxidizer_ratios: List[Quantity] = [float(item.strip()) for item in data['oxid_ratios']['value'].split(',')]
 
             if len(fuels) > 1:
-                fuels_ratios = [unit*float(item.strip()) for item in data['fuel_ratios']['value'].split(',')]
+                fuels_ratios = [float(item.strip()) for item in data['fuel_ratios']['value'].split(',')]
 
             for i in range(len(fuels)):
-                spc: Species = list(filter(lambda s: fuels[i] == s.name, species))[0]
-                mixtures[MixtureType.FUEL_MIXTURE].add_species(spc, fuels_ratios[i])
+                mixtures[MixtureType.FUEL_MIXTURE].add_species(spc_dict[fuels[i]], fuels_ratios[i])
 
             for i in range(len(oxidizers)):
-                spc: Species = list(filter(lambda s: oxidizers[i] == s.name, species))[0]
-                mixtures[MixtureType.OXIDIZER_MIXTURE].add_species(spc, oxidizer_ratios[i])
+                mixtures[MixtureType.OXIDIZER_MIXTURE].add_species(spc_dict[oxidizers[i]], oxidizer_ratios[i])
 
         else:
             mixtures[MixtureType.GAS_MIXTURE] = Mixture()
-            spc: Species
-            for spc in species:
-                if spc.name in data:
-                    mix_dict: Dict[str, Any] = data[spc.name]
-                    mixture_quantity = mix_dict['value']
-                    mixture_units = mix_dict['units']
+            for spc_name, contents in data.items():
+                mixture_quantity = contents['value']
+                mixture_units = contents['units']
 
-                    # TODO take bounds into account
-
-                    if mixture_quantity == 'bal':
-                        mixtures[MixtureType.GAS_MIXTURE].add_balanced_species(spc)
-                    else:
-                        mixtures[MixtureType.GAS_MIXTURE].add_species(spc, UnitParser.parse('concentration', mixture_quantity, mixture_units))
-
+                # TODO take bounds into account
+                if mixture_quantity == 'bal':
+                    mixtures[MixtureType.GAS_MIXTURE].add_balanced_species(spc_dict[spc_name])
+                else:
+                    mixtures[MixtureType.GAS_MIXTURE].add_species(spc_dict[spc_name],
+                                                                  UnitParser.parse('concentration', mixture_quantity,
+                                                                                   mixture_units))
 
         return mixtures
 

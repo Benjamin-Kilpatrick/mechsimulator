@@ -3,6 +3,7 @@ import sys
 from typing import List
 from dotenv import load_dotenv
 
+from data.experiments.experiment_set import ExperimentSet
 from data.job.job import Job
 # from serial.plotter import plotter_main, plotter_util
 from serial.reader.job_reader import JobReader
@@ -26,7 +27,7 @@ def main():
     # Run each job object
     for job in jobs:
         for experiment_set in job.experiment_files:
-            Simulator.run_experiment_set(experiment_set, job.mechanisms)
+            simulated_experiments: List[ExperimentSet] = Simulator.run_experiment_set(experiment_set, job.mechanisms)
 
     # Output jobs plots
     """for job in jobs:
