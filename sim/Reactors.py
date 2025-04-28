@@ -437,6 +437,15 @@ class Reactors:
 
     @staticmethod
     def set_gas_state(gas, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture]):
+        """
+        Sets a gas mixture to a desired thermodynamic state
+
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
+        :return gas: Cantera Solution object
+        """
         new_mix = SimulatorUtils.convert_gas_mixture(mix[MixtureType.GAS_MIXTURE])
         gas.TPX = temp, pressure, new_mix
         return gas
@@ -444,13 +453,14 @@ class Reactors:
     @staticmethod
     def set_fuel_state(gas: cantera.Solution, temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], phi):
         """
+        Sets fuel and oxidizer mixtures to a desired thermodynamic state
 
-        :param gas:
-        :param temp:
-        :param pressure:
-        :param mix:
+        :param gas: Cantera object describing a kinetic gas (mechanism)
+        :param temp: reactor inlet temperature, pre-configured to kelvin via pint
+        :param pressure: reactor constant pressure, pre-configured to atm via pint
+        :param mix: dict of mixture type and mixture list, initial species concentrations at reactor inlet initial species concentrations at reactor inlet
         :param phi: ratio of the actual fuel-to-oxidizer ratio to the stoichiometric fuel-to-oxidizer ratio.
-        :return:
+        :return Cantera Solution object
         """
 
         # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
