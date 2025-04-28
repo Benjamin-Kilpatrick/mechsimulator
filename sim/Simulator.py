@@ -22,9 +22,11 @@ class Simulator:
             curr_experiment_set: ExperimentSet = experiment_set.copy()
             SimulatorUtils.rename_all_species(curr_experiment_set, mechanism)
             if curr_experiment_set.calculation_type == CalculationType.OUTCOME or curr_experiment_set.calculation_type == CalculationType.PATHWAY:
+                curr_experiment_set.add_simulated_experiments(curr_experiment_set.generate_conditions())
                 Simulator.outcome_simulator.simulate_experiments(curr_experiment_set, curr_experiment_set.all_simulated_experiments[0], mechanism)
 
             elif curr_experiment_set.calculation_type == CalculationType.SENSITIVITY:
+                curr_experiment_set.add_simulated_experiments(curr_experiment_set.generate_conditions())
                 Simulator.outcome_simulator.simulate_experiments(curr_experiment_set, curr_experiment_set.all_simulated_experiments[0], mechanism)
                 if curr_experiment_set.reaction == Reaction.SHOCKTUBE:
                     # add epsilon to prevent divide by 0

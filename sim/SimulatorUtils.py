@@ -1,9 +1,12 @@
 from typing import Tuple, List, Dict
 
 import numpy
+import pint
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.condition import Condition
+from data.experiments.common.data_source import DataSource
+from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.experiments.mixture import Mixture
@@ -65,8 +68,26 @@ class SimulatorUtils:
 
         return interp_ydata
 
+    # @staticmethod
+    # def generate_p_of_t(end_time: pint.Quantity, dpdt):
+    #     """ Creates a P(t) array from an end_time and a dP/dt
+    #
+    #         :param end_time: final time of the simulation (seconds)
+    #         :param dpdt: linear change in pressure during the simulation (%/ms)
+    #         :return p_of_t: array of noramlized pressure starting at 1 and going
+    #             to the end pressure calculated by the end_time and dpdt
+    #         :rtype: Numpy array of shape (2,
+    #     """
+    #
+    #     times = numpy.array([0, end_time.to('seconds').magnitude])
+    #     end_pressure = 1 + (end_time * dpdt) / 100
+    #     pressures = numpy.array([1, end_pressure])
+    #     p_of_t = numpy.vstack((times, pressures))
+    #
+    #     return p_of_t
+
     @staticmethod
-    def generate_p_of_t(end_time, dpdt):
+    def generate_p_of_t(condition_source: DataSource, experiment: Experiment):
         """ Creates a P(t) array from an end_time and a dP/dt
 
             :param end_time: final time of the simulation (seconds)
@@ -75,13 +96,30 @@ class SimulatorUtils:
                 to the end pressure calculated by the end_time and dpdt
             :rtype: Numpy array of shape (2,
         """
+        if condition_source == DataSource.SIMULATION:
+            end_time: pint.Quantity = experiment.get(Condition.END_TIME)
+            dpdt: pint.Quantity = experiment.get(Condition.DPDT)
+            times = numpy.array([0, end_time.to('seconds').magnitude])
+            end_pressure = 1 + (end_time * dpdt) / 100
+            pressures = numpy.array([1, end_pressure])
+            p_of_t = numpy.vstack((times, pressures))
 
-        times = numpy.array([0, end_time])
-        end_pressure = 1 + ((end_time * 1e3) * dpdt) / 100
-        pressures = numpy.array([1, end_pressure])
-        p_of_t = numpy.vstack((times, pressures))
+            return p_of_t
+        else:
+            if experiment.results.get_variable(Condition.PRESSURE) is not None:
+                times = experiment.results.get_variable(Condition.TIME).to('seconds')
+                pressures = experiment.results.get_variable(Condition.PRESSURE).to('atm')
+                # TODO fix mag
+                p_of_t = numpy.vstack((times.magnitude, pressures.magnitude))
 
-        return p_of_t
+                return p_of_t
+            elif experiment.has(Condition.DPDT):
+                """end_time = exp_obj['conds']['end_time'][0]
+                dpdt = exp_obj['conds']['dpdt'][0]
+                p_of_t = create_p_of_t(end_time, dpdt)
+                conds_dct['p_of_t'][cond_idx] = p_of_t"""
+                pass
+
 
     @staticmethod
     def generate_ydata_shape(experiment_set: ExperimentSet, mechanism: Mechanism) -> Tuple:
@@ -163,7 +201,7 @@ class SimulatorUtils:
         sum: float = 0.0
         for spc, quantity in mixture.species:
             # maybe works???
-            out[spc.name] = quantity.to('%')
+            out[spc.name] = quantity.to('percent').magnitude
             sum += out[spc.name]
 
         if mixture.balanced is not None:
