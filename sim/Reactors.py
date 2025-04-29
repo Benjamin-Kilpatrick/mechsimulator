@@ -153,6 +153,7 @@ class Reactors:
         # Get results
         times = states.t
         pressures = states.P
+        temps = states.T
         targ_concs = np.zeros((len(targ_species), len(times)))
         for ndx, targ_spc in enumerate(targ_species):
             targ_concs[ndx, :] = states.X[:, gas.species_index(targ_spc)]
