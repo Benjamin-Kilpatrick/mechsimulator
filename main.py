@@ -34,8 +34,8 @@ def main():
             completed_jobs.append((job, simulated_experiments))
 
     # Output jobs plots
-    for job in jobs:
-        Plotter.plot(job)
+    for job, mechanism_exps in completed_jobs:
+        Plotter.plot(job, mechanism_exps)
 
 
 if __name__ == "__main__":
