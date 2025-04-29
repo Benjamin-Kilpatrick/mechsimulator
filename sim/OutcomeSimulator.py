@@ -282,9 +282,9 @@ class OutcomeSimulator(ReactionSimulator):
         return velocities[0] * 100
 
     def set_targets(self, experiment, targets: List[Species], mechanism, data):
-        for target in targets:
+        for ndx, target in enumerate(targets):
             name = target.name
-            ndx = mechanism.solution.species_index(name)
+            # ndx = mechanism.solution.species_index(name)
             experiment.results.set_target(name, data[ndx])
 
     def get_basic_args(self, experiment_set, experiment, mechanism):
