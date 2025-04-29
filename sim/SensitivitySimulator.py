@@ -9,47 +9,54 @@ from data.mechanism.mechanism import Mechanism
 from data.mechanism.species import Species
 from sim.OutcomeSimulator import OutcomeSimulator
 from sim.ReactionSimulator import ReactionSimulator
+from sim.SimulatorUtils import SimulatorUtils
 
 
 class SensitivitySimulator(ReactionSimulator):
-    FACTOR = 0.01
+    FACTOR = 0.01  # TODO: Make a command line arg?
 
-    def __init__(self):
+    def __init__(self, outcome_simulator):
         super().__init__()
-        self.outcomeSimulator = OutcomeSimulator()
+        self.outcome_simulator = outcome_simulator
 
-    def simulate_experiments(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
+    def simulate_experiments(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions=None):
         reference_results = experiment_set.all_simulated_experiments[0]
         if experiment_set.reaction == Reaction.SHOCKTUBE:
-            self.outcomeSimulator.shock_tube(experiment_set, experiments, mechanism)
+            self.outcome_simulator.shock_tube(experiment_set, experiments, mechanism)
         elif experiment_set.reaction == Reaction.PLUG_FLOW_REACTOR:
-            self.outcomeSimulator.plug_flow_reactor(experiment_set, experiments, mechanism)
+            self.outcome_simulator.plug_flow_reactor(experiment_set, experiments, mechanism)
         elif experiment_set.reaction == Reaction.JET_STREAM_REACTOR:
-            self.jet_stream_reactor(experiment_set, experiments, mechanism)
+            self.outcome_simulator.jet_stream_reactor(experiment_set, experiments, mechanism, previous_solutions)
         elif experiment_set.reaction == Reaction.RAPID_COMPRESSION_MACHINE:
-            self.outcomeSimulator.rapid_compression_machine(experiment_set, experiments, mechanism)
+            self.outcome_simulator.rapid_compression_machine(experiment_set, experiments, mechanism)
         elif experiment_set.reaction == Reaction.CONST_T_P:
-            self.outcomeSimulator.const_t_p(experiment_set, experiments, mechanism)
-        elif experiment_set == Reaction.FREE_FLAME:
-            self.free_flame(experiment_set, experiments, mechanism)
+            self.outcome_simulator.const_t_p(experiment_set, experiments, mechanism)
+        elif experiment_set.reaction == Reaction.FREE_FLAME:
+            self.outcome_simulator.free_flame(experiment_set, experiments, mechanism, previous_solutions)
         else:
             raise ValueError(f'Unknown reaction: {mechanism}')
-        self.calculate_coefficients(experiment_set.get_target_species(), reference_results, experiments)
+        SensitivitySimulator.calculate_coefficients(experiment_set.get_target_species(), reference_results, experiments)
 
-    def jet_stream_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
-        reference_results = experiment_set.all_simulated_experiments[0]
-        self.outcomeSimulator.jet_stream_reactor(experiment_set, experiments, mechanism)
-        self.calculate_coefficients(experiment_set.get_target_species(), reference_results, experiments)
-
-    def free_flame(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
-        reference_results = experiment_set.all_simulated_experiments[0]
-        self.outcomeSimulator.free_flame(experiment_set, experiments, mechanism)
-        self.calculate_coefficients(experiment_set.get_target_species(), reference_results, experiments)
-
-    def calculate_coefficients(self, targets: List[Species], reference_results: List[Experiment], experiments: List[Experiment]):
+    @staticmethod
+    def calculate_coefficients(targets: List[Species], reference_results: List[Experiment], experiments: List[Experiment]):
         for experiment_ndx in range(len(experiments)):
             for target in targets:
                 reaction_data = experiments[experiment_ndx].results.get_target(target.name)
                 reference_data = reference_results[experiment_ndx].results.get_target(target.name)
                 sensitivity_coefficients = (reaction_data - reference_data) / (reference_data * SensitivitySimulator.FACTOR)
                 experiments[experiment_ndx].results.set_target(target.name, sensitivity_coefficients)
+
+    @staticmethod
+    def requires_previous_solutions(reaction_type: Reaction):
+        return reaction_type in (Reaction.JET_STREAM_REACTOR, Reaction.FREE_FLAME)
+
+    def get_previous_solutions(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism):
+        if experiment_set.reaction == Reaction.JET_STREAM_REACTOR:
+            previous_solutions = self.outcome_simulator.jet_stream_reactor(experiment_set, experiments, mechanism)
+            self.outcome_simulator.jet_stream_reactor(experiment_set, experiments, mechanism, previous_solutions)
+        elif experiment_set.reaction == Reaction.FREE_FLAME:
+            previous_solutions = self.outcome_simulator.free_flame(experiment_set, experiments, mechanism)
+            self.outcome_simulator.free_flame(experiment_set, experiments, mechanism, previous_solutions)
+        else:
+            raise ValueError(f"{experiment_set.reaction} does not use previous solutions")
+        return previous_solutions

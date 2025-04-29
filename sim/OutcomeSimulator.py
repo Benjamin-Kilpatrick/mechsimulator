@@ -6,6 +6,8 @@ import numpy as np
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.condition import Condition
 from data.experiments.common.idt_method import IDTMethod
+from data.experiments.common.idt_target import IDTTarget
+from data.experiments.common.target import Target
 from data.experiments.experiment import Experiment
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
@@ -39,7 +41,7 @@ class OutcomeSimulator(ReactionSimulator):
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
 
             elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                data = self.calculate_idt(experiment_set, times, pressures, concentrations)
+                data = self.calculate_idt(experiment_set, times, pressures, temps, concentrations)
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
 
             elif experiment_set.measurement == Measurement.HALF_LIFE:  # TODO: Currently assumes only one target
@@ -85,8 +87,7 @@ class OutcomeSimulator(ReactionSimulator):
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
 
-    def jet_stream_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions=None,
-                           output_all=False):
+    def jet_stream_reactor(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism, previous_solutions=None):
         # Make sure that the prev_soln array is the right size (if given)
         num_conditions = len(experiment_set.all_simulated_experiments[0])
         if previous_solutions is not None:
@@ -97,6 +98,10 @@ class OutcomeSimulator(ReactionSimulator):
         all_concentrations = np.ndarray((num_conditions, mechanism.solution.n_species))
 
         for exp_ndx, experiment in enumerate(experiments):
+            previous_concentrations = None
+            if previous_solutions is not None:
+                previous_concentrations = previous_solutions[exp_ndx]
+
             concentrations, previous_concentrations, end_gas = Reactors.jsr(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.RES_TIME),
@@ -105,7 +110,7 @@ class OutcomeSimulator(ReactionSimulator):
                 previous_concentrations=previous_concentrations
             )
 
-            if output_all:
+            if previous_solutions is None: # We're here to GET previous solutions
                 all_concentrations[exp_ndx, :] = previous_concentrations
 
             if experiment_set.calculation_type == CalculationType.PATHWAY:
@@ -121,7 +126,7 @@ class OutcomeSimulator(ReactionSimulator):
 
     def rapid_compression_machine(self, experiment_set: ExperimentSet, experiments: List[Experiment], mechanism: Mechanism):
         for experiment in experiments:
-            concentrations, pressures, times = Reactors.rcm(
+            concentrations, pressures, temps, times = Reactors.rcm(
                 *self.get_basic_args(experiment_set, experiment, mechanism),
                 experiment.conditions.get(Condition.END_TIME),
                 experiment.conditions.get(Condition.V_OF_T)
@@ -130,7 +135,7 @@ class OutcomeSimulator(ReactionSimulator):
             if experiment_set.calculation_type == CalculationType.PATHWAY:
                 SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
             elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                data = self.calculate_idt(experiment_set, times, pressures, concentrations)
+                data = self.calculate_idt(experiment_set, times, pressures, temps, concentrations)
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
@@ -181,7 +186,7 @@ class OutcomeSimulator(ReactionSimulator):
 
         return new_solution_list
 
-    def calculate_idt(self, experiment_set: ExperimentSet, times, pressures, concentrations):  # TODO: Resolve pressure
+    def calculate_idt(self, experiment_set: ExperimentSet, times, pressures, temperatures, concentrations):
         """ Gets the ignition delay time for a reaction. Can determine IDT using one of three methods. Options are as
             follows:
                 1: intersection of steepest slope with baseline
@@ -194,15 +199,21 @@ class OutcomeSimulator(ReactionSimulator):
             @param concentrations The concentrations which Cantera has given us
         """
 
-        idt_targets = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGETS)
-        idt_methods = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_METHOD)
+        if experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGET) == IDTTarget.PRESSURE:
+            idt_targets = [Condition.PRESSURE]
+            ydata = numpy.ndarray(len(pressures))
+            target_profile = pressures
+        elif experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGET) == IDTTarget.TEMPERATURE:
+            idt_targets = [Condition.TEMPERATURE]
+            ydata = numpy.ndarray(len(temperatures))
+            target_profile = temperatures
+        else:
+            idt_targets = experiment_set.targets.special_targets.get(Target.IGNITION_DELAY)
+            ydata = numpy.ndarray(len(idt_targets))
+        idt_method = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_METHOD)
         target_species = experiment_set.get_target_species()
-        ydata = numpy.ndarray((len(idt_targets)))
         for target_ndx, idt_target in enumerate(idt_targets):
-            idt_method = idt_methods[target_ndx]
-            if idt_target == Condition.PRESSURE:
-                target_profile = pressures
-            else:
+            if idt_target == IDTTarget.SPECIES:
                 species_ndx = target_species.index(idt_target)
                 target_profile = concentrations[species_ndx]
 
@@ -271,10 +282,10 @@ class OutcomeSimulator(ReactionSimulator):
         return velocities[0] * 100
 
     def set_targets(self, experiment, targets: List[Species], mechanism, data):
-        for idx, target in enumerate(targets):
+        for target in enumerate(targets):
             name = target.name
-            # ndx = mechanism.solution.species_index(name)
-            experiment.results.set_target(name, data[idx])
+            ndx = mechanism.solution.species_index(name)
+            experiment.results.set_target(name, data[ndx])
 
     def get_basic_args(self, experiment_set, experiment, mechanism):
         return experiment.conditions.get(Condition.TEMPERATURE), experiment.conditions.get(Condition.PRESSURE), experiment.mixtures, mechanism.solution, experiment_set.get_target_species(),
