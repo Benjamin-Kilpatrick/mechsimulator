@@ -24,7 +24,7 @@ class Simulator:
             SimulatorUtils.rename_all_species(curr_experiment_set, mechanism)
             if curr_experiment_set.calculation_type == CalculationType.OUTCOME or curr_experiment_set.calculation_type == CalculationType.PATHWAY:
                 experiments: List[Experiment] = curr_experiment_set.generate_conditions()
-                Simulator.outcome_simulator.simulate_experiments(curr_experiment_set, curr_experiment_set.all_simulated_experiments[0], mechanism)
+                Simulator.outcome_simulator.simulate_experiments(curr_experiment_set, experiments, mechanism)
                 curr_experiment_set.add_simulated_experiments(experiments)
 
             elif curr_experiment_set.calculation_type == CalculationType.SENSITIVITY:
