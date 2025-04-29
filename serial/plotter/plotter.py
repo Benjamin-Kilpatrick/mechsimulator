@@ -421,7 +421,6 @@ class PlotterConcentrationSubplot(PlotterSubplot):
 
         for condition_index, condition in enumerate(quantities):
             axis: Axes = axes_iterator.__next__()
-            # todo add loop for concentrations somewhere
             subplots.append(PlotterConcentrationSubplot(axis, spc, experiment_set, plot_format, condition_index, condition))
 
         return subplots
