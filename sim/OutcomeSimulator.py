@@ -41,17 +41,10 @@ class OutcomeSimulator(ReactionSimulator):
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
 
             elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                data = self.calculate_idt(experiment_set, times, pressures, temps, concentrations)
-                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+                self.calculate_idt(experiment_set, experiment, times, pressures, temps, concentrations)
 
-            elif experiment_set.measurement == Measurement.HALF_LIFE:  # TODO: Currently assumes only one target
-                half_value = concentrations[0][0] / 2
-                index = numpy.abs(concentrations[0] - half_value).argmin()
-                data = times[index]
-                # NaN if half value not reached
-                if half_value < numpy.min(concentrations[0]):
-                    data = numpy.nan
-                self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
+            elif experiment_set.measurement == Measurement.HALF_LIFE:
+                self.get_half_life(experiment_set, experiment, concentrations, times)
 
             elif experiment_set.measurement == Measurement.ABSORPTION:
                 data = self.calculate_absorption(experiment_set, experiment, concentrations, times)
@@ -135,7 +128,7 @@ class OutcomeSimulator(ReactionSimulator):
             if experiment_set.calculation_type == CalculationType.PATHWAY:
                 SimulatorUtils.raise_invalid_pathways_error(experiment_set.reaction)
             elif experiment_set.measurement == Measurement.IGNITION_DELAY_TIME:
-                data = self.calculate_idt(experiment_set, times, pressures, temps, concentrations)
+                data = self.calculate_idt(experiment_set, experiment, times, pressures, temps, concentrations)
                 self.set_targets(experiment, experiment_set.get_target_species(), mechanism, data)
             else:
                 SimulatorUtils.raise_reaction_measurement_error(experiment_set.reaction, experiment_set.measurement)
@@ -186,7 +179,7 @@ class OutcomeSimulator(ReactionSimulator):
 
         return new_solution_list
 
-    def calculate_idt(self, experiment_set: ExperimentSet, times, pressures, temperatures, concentrations):
+    def calculate_idt(self, experiment_set: ExperimentSet, experiment: Experiment, times, pressures, temperatures, concentrations):
         """ Gets the ignition delay time for a reaction. Can determine IDT using one of three methods. Options are as
             follows:
                 1: intersection of steepest slope with baseline
@@ -198,22 +191,19 @@ class OutcomeSimulator(ReactionSimulator):
             @param pressures The pressures which Cantera has given us
             @param concentrations The concentrations which Cantera has given us
         """
-
-        if experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGET) == IDTTarget.PRESSURE:
+        target_type: IDTTarget = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGET)
+        if target_type == IDTTarget.PRESSURE:
             idt_targets = [Condition.PRESSURE]
-            ydata = numpy.ndarray(len(pressures))
             target_profile = pressures
-        elif experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGET) == IDTTarget.TEMPERATURE:
+        elif target_type == IDTTarget.TEMPERATURE:
             idt_targets = [Condition.TEMPERATURE]
-            ydata = numpy.ndarray(len(temperatures))
             target_profile = temperatures
         else:
             idt_targets = experiment_set.targets.special_targets.get(Target.IGNITION_DELAY)
-            ydata = numpy.ndarray(len(idt_targets))
         idt_method = experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_METHOD)
         target_species = experiment_set.get_target_species()
         for target_ndx, idt_target in enumerate(idt_targets):
-            if idt_target == IDTTarget.SPECIES:
+            if experiment_set.condition_range.conditions.get(Condition.IGNITION_DELAY_TARGET) == IDTTarget.SPECIES:
                 species_ndx = target_species.index(idt_target)
                 target_profile = concentrations[species_ndx]
 
@@ -236,24 +226,43 @@ class OutcomeSimulator(ReactionSimulator):
                 # Get the y-intercept of the steepest tangent line
                 steepest_int = steepest_val - steepest_slope * steepest_time
                 # Find the intersection of the two lines
-                ydata[target_ndx] = (initial_int - steepest_int) / (steepest_slope - initial_slope)
+                data = (initial_int - steepest_int) / (steepest_slope - initial_slope)
             elif idt_method == IDTMethod.MAX_SLOPE:
-                ydata[target_ndx] = steepest_time
+                data = steepest_time
             elif idt_method == IDTMethod.MAX_VALUE:
                 # Check that the max value doesn't occur at the last point
                 if numpy.argmax(target_profile) + 1 == len(times):
                     print('Peak value at last point')
-                ydata[target_ndx] = times[numpy.argmax(target_profile)]
+                data = times[numpy.argmax(target_profile)]
             else:
                 raise NotImplementedError
 
-        return ydata
+            if target_type == IDTTarget.PRESSURE:
+                experiment.results.set_variable(Condition.PRESSURE, data)
+            if target_type == IDTTarget.TEMPERATURE:
+                experiment.results.set_variable(Condition.TEMPERATURE, data)
+            else:
+                experiment.results.set_target(idt_target.name, data)
 
     def get_outlet(self, data):
         return data[:, -1]
 
+    def get_half_life(self, experiment_set, experiment, concentrations, times):
+        half_life_targets = experiment_set.targets.special_targets.get(Target.HALF_LIFE)
+        for target in half_life_targets:
+            target_ndx = experiment_set.get_target_species().index(target)
+            curr_concentrations = concentrations[target_ndx]
+
+            half_value = curr_concentrations[0] / 2
+            # NaN if half value not reached
+            if half_value < numpy.min(concentrations[target_ndx]):
+                experiment.results.set_target(target.name, numpy.nan)
+            else:
+                half_value_ndx = numpy.abs(curr_concentrations - half_value).argmin()
+                experiment.results.set_target(target.name, times[half_value_ndx])
+
     def calculate_absorption(self, experiment_set: ExperimentSet, experiment: Experiment, concentrations, times):
-        active_species = experiment.conditions.get(Condition.ACTIVE_SPECIES)
+        active_species = experiment_set.targets.special_targets.get(Target.ACTIVE)
         absorption_coefficients = experiment.conditions.get(Condition.ABS_COEFFICIENT)
         path_length = experiment.conditions.get(Condition.PATH_LENGTH)
         pressure = experiment.conditions.get(Condition.PRESSURE)
@@ -264,14 +273,14 @@ class OutcomeSimulator(ReactionSimulator):
         raw_transmission = numpy.full((len(target_species), num_wavelengths), numpy.nan)
         for wavelength_ndx in range(num_wavelengths):
             for species_ndx, curr_species in enumerate(active_species):
-                curr_coefficient = absorption_coefficients[wavelength_ndx + 1].get(curr_species)[0]
+                curr_coefficient = absorption_coefficients[wavelength_ndx + 1][0]
                 target_ndx = wavelength_ndx * (num_active_species + 1) + species_ndx
                 if curr_coefficient is not None:
                     curr_concentration = concentrations[target_species.index(curr_species)]
                     absorbance = curr_concentration * curr_coefficient * path_length * pressure
                     raw_transmission[target_ndx] = numpy.exp(-absorbance)
             total_ndx = (wavelength_ndx + 1) * (num_active_species + 1) - 1
-            raw_transmission[total_ndx] = numpy.nanprod(raw_transmission, axis=0)
+            raw_transmission[total_ndx] = numpy.nanprod(raw_transmission, 0)
         percent_absorption = 100 * (1 - raw_transmission)
         return SimulatorUtils.interpolate(percent_absorption, times, experiment_set.get_time_x_data())
 
