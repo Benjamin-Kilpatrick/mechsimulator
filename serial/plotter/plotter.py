@@ -390,7 +390,7 @@ class PlotterConcentrationSimulatedLine(PlotterLine):
         return '-'
 
     def get_marker(self):
-        return '.'
+        return ''
 
     def get_zorder(self):
         return None
@@ -403,13 +403,13 @@ class PlotterConcentrationSimulatedLine(PlotterLine):
 
 
 class PlotterConcentrationSubplot(PlotterSubplot):
-    def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantity: Quantity):
+    def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantities: Quantity):
         lines = [
             PlotterConcentrationMeasurementLine(spc, experiment_set, condition_index),
             PlotterConcentrationSimulatedLine(spc, experiment_set, condition_index)
         ]
         super().__init__(ax, lines, plot_format, spc)
-        title = f"{quantity.magnitude} {quantity.units}"
+        title = f"{quantities.magnitude} {quantities.units}"
         self.ax.set_title(title)
 
 
@@ -421,7 +421,8 @@ class PlotterConcentrationSubplot(PlotterSubplot):
 
         for condition_index, condition in enumerate(quantities):
             axis: Axes = axes_iterator.__next__()
-            subplots.append(PlotterConcentrationSubplot(axis, spc, experiment_set, plot_format, condition_index, condition))
+            subplots.append(
+                PlotterConcentrationSubplot(axis, spc, experiment_set, plot_format, condition_index, condition))
 
         return subplots
 
@@ -442,9 +443,9 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
             self.subplots.extend(PlotterSpeciesSubplot.load_from_experiment_set(experiment_set, self.plot_format, self.axes_iterator))
         elif experiment_set.measurement == Measurement.CONCENTRATION:
             var_of_int = self.get_variable_of_interest()
-            quantities: List[Quantity] = [ experiment.conditions.get(var_of_int) for experiment in  self.experiment_set.measured_experiments ]
+            measured_quantities: List[Quantity] = [experiment.conditions.get(var_of_int) for experiment in self.experiment_set.measured_experiments]
             for spc in experiment_set.simulated_species:
-                self.subplots.extend(PlotterConcentrationSubplot.load_from_experiment_set(experiment_set, plot_format, self.axes_iterator, quantities, spc))
+                self.subplots.extend(PlotterConcentrationSubplot.load_from_experiment_set(experiment_set, plot_format, self.axes_iterator, measured_quantities, spc))
         else:
             raise NotImplementedError
 
@@ -454,7 +455,7 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
     def add_figure(self):
         fig = plt.figure(figsize=(8.5, 11))
         self.figs.append(fig)
-        PlotterFigure.add_headers_and_footers(self.job, self.experiment_set, fig)
+        PlotterFigure.add_headers_and_footers(self.job, self.mechanism, self.experiment_set, fig)
 
     def get_figure(self) -> Figure:
         if len(self.figs) == 0:
@@ -469,7 +470,7 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
             subplot.plot()
 
     @staticmethod
-    def add_headers_and_footers(job: Job, exp_set: ExperimentSet, fig: Figure):
+    def add_headers_and_footers(job: Job, mechanism:Mechanism, exp_set: ExperimentSet, fig: Figure):
         """ Adds header and footer text to a figure
         """
 
@@ -487,7 +488,7 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
                         header, fontsize=12, color=COLORS[mech_idx % len(COLORS)])
 
         # Make some text describing the experimental set
-        source = exp_set.metadata.source
+        source = mechanism.mechanism_name
         description = exp_set.metadata.description
         reac_type = REACTION_DISPLAY_NAMES[exp_set.reaction]
         meas_type = MEASUREMENT_DISPLAY_NAMES[exp_set.measurement]
