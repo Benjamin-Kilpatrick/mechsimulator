@@ -115,7 +115,8 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
             self.subplots.extend(PlotterSpeciesSubplot.load_from_experiment_set(experiment_set, self.plot_format, self.axes_iterator))
         elif experiment_set.measurement == Measurement.CONCENTRATION:
             var_of_int = self.get_variable_of_interest()
-            measured_quantities: List[Quantity] = [experiment.conditions.get(var_of_int) for experiment in self.experiment_set.measured_experiments]
+            measured_quantities: List[Quantity] = [value for value in experiment_set.get_condition_x_data()]
+            # measured_quantities: List[Quantity] = [experiment.conditions.get(var_of_int) for experiment in self.experiment_set.measured_experiments]
             for spc in experiment_set.simulated_species:
                 self.subplots.extend(PlotterConcentrationSubplot.load_from_experiment_set(experiment_set, plot_format, self.axes_iterator, measured_quantities, spc))
         else:
