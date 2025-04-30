@@ -1,28 +1,20 @@
 import os
-from typing import List, Any, Tuple
+from typing import List, Tuple
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.ticker import FormatStrFormatter as Formatter
 import matplotlib.backends.backend_pdf as plt_pdf
 from pint import Quantity
 
-from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.condition import Condition
-from data.experiments.common.data_source import DataSource
-
 
 from data.experiments.experiment_set import ExperimentSet
 from data.experiments.measurement import Measurement
 from data.experiments.reaction import Reaction
 from data.job.job import Job
 from data.mechanism.mechanism import Mechanism
-from data.mechanism.species import Species
-from serial.plotter.concentration import PlotterConcentrationSubplot
-from serial.plotter.line import PlotterLine
-from serial.plotter.outlet import PlotterSpeciesSubplot
+from serial.plotter.measurement_types.concentration import PlotterConcentrationSubplot
+from serial.plotter.measurement_types.outlet import PlotterSpeciesSubplot
 
 from serial.plotter.plotter_format import PlotterFormat
 from serial.plotter.plotter_iterator import FigureContainer, PlotterFigureAxesIterator
