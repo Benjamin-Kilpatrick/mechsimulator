@@ -1,5 +1,4 @@
 import os
-from abc import ABC, abstractmethod
 from typing import List, Any, Tuple
 
 import numpy as np
@@ -9,8 +8,6 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter as Formatter
 import matplotlib.backends.backend_pdf as plt_pdf
 from pint import Quantity
-
-#from rdkit.Contrib.LEF.AddLabels import labels
 
 from data.experiments.common.calculation_type import CalculationType
 from data.experiments.common.condition import Condition
@@ -23,8 +20,13 @@ from data.experiments.reaction import Reaction
 from data.job.job import Job
 from data.mechanism.mechanism import Mechanism
 from data.mechanism.species import Species
-from serial.plotter import plotter_main, plotter_util, outcome
-from serial.plotter.outcome import build_figs_axes, _mech_frmt, single_mech
+from serial.plotter.concentration import PlotterConcentrationSubplot
+from serial.plotter.line import PlotterLine
+from serial.plotter.outlet import PlotterSpeciesSubplot
+
+from serial.plotter.plotter_format import PlotterFormat
+from serial.plotter.plotter_iterator import FigureContainer, PlotterFigureAxesIterator
+from serial.plotter.subplot import PlotterSubplot
 
 # TODO! Figure out replacement with M.
 # this is a mapping from variable type to allowed unit
@@ -100,331 +102,6 @@ MEASUREMENT_DISPLAY_NAMES = {
     Measurement.HALF_LIFE:           'Half-life',
 }
 
-
-class PlotterFormat:
-    def __init__(self):
-        self.plot_points:bool = True
-        self.xunit = None
-        self.yunit = None
-        self.ylimit = [0.0, 0.0055] # TODO! where did this come from
-        self.xlimit = None
-        self.omit_targs = None
-        self.exp_on_top = True
-        self.rows = 4
-        self.cols = 3
-        self.marker_size = 15
-        self.group_by = 'cond'
-        self.exp_color = 'black'
-        self.xscale = 'linear'
-        self.yscale = 'linear'
-
-    def get_num_plots_per_page(self) -> int:
-        return self.rows * self.cols
-
-class PlotterLine(ABC):
-    @abstractmethod
-    def get_ydata(self) -> np.ndarray:
-        pass
-
-    @abstractmethod
-    def get_xdata(self):
-        pass
-
-    @abstractmethod
-    def get_label(self) -> str:
-        pass
-
-    @abstractmethod
-    def get_color(self):
-        pass
-
-    @abstractmethod
-    def get_linestyle(self):
-        pass
-
-    @abstractmethod
-    def get_marker(self) -> float:
-        pass
-
-    @abstractmethod
-    def get_zorder(self):
-        pass
-
-    def plot(self, ax):
-        mech_xdata = self.get_xdata()
-        line_ydata = self.get_ydata()
-        label = self.get_label()
-        color = self.get_color()
-        linestyle = self.get_linestyle()
-        marker = self.get_marker()
-        zorder = self.get_zorder()
-        try:
-            ax.plot(mech_xdata, line_ydata, label=label, color=color, linestyle=linestyle, marker=marker, zorder=zorder)
-        except ValueError as e:
-            print(e)
-
-
-class MeasuredConditionLine(PlotterLine):
-    """
-    For plotting a condition in a measured experiment
-    """
-
-    def __init__(self, condition: Condition, experiment_set: ExperimentSet):
-        self.condition = condition
-        self.experiment_set = experiment_set
-
-    def get_label(self):
-        return "Ur mom"
-
-    def get_color(self):
-        return "green"
-
-    def get_linestyle(self):
-        return "-"
-
-    def get_marker(self):
-        return 1.0
-
-    def get_zorder(self):
-        return None
-
-    def get_xdata(self):
-        return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
-
-    def get_ydata(self) -> np.ndarray:
-        data = [experiment.get(self.condition).magnitude for experiment in self.experiment_set.measured_experiments]
-        return np.asarray(data)
-
-
-class OutletSpeciesExperimentLine(PlotterLine):
-
-    def __init__(self, spc: Species, experiment_set: ExperimentSet):
-        self.experiment_set = experiment_set
-        self.spc = spc
-
-    def get_label(self):
-        return "Ur mom"
-
-    def get_color(self):
-        return "black"
-
-    def get_linestyle(self):
-        return ''
-
-    def get_marker(self):
-        return '.'
-
-    def get_zorder(self):
-        return None
-
-    def get_xdata(self):
-        return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
-
-    def get_ydata(self) -> np.ndarray:
-        out = [experiment.results.target_results[self.spc.name][0] if self.spc.name in experiment.results.target_results else None for experiment in self.experiment_set.measured_experiments ]
-        return np.asarray(out)
-
-class OutletSpeciesSimulatedLine(PlotterLine):
-    def __init__(self, spc: Species, experiment_set: ExperimentSet):
-        self.experiment_set = experiment_set
-        self.spc = spc
-
-    def get_label(self):
-        return "Ur mom"
-
-    def get_color(self):
-        return "red"
-
-    def get_linestyle(self):
-        return ''
-
-    def get_marker(self):
-        return 1.0
-
-    def get_zorder(self):
-        return None
-
-    def get_xdata(self):
-        return np.asarray([])
-        #return self.experiment_set.get_x_data(x_source=DataSource.SIMULATION)
-
-    def get_ydata(self) -> np.ndarray:
-        return np.asarray([])
-        #size = len(self.experiment_set.get_x_data(x_source=DataSource.SIMULATION)) # TODO! temp until actual data exists
-        #return np.asarray([1.0] * size)
-
-
-class FigureContainer(ABC):
-
-    def add_figure(self):
-        pass
-
-    def get_figures(self) -> List[Figure]:
-        pass
-
-    def get_figure(self) -> Figure:
-        pass
-
-class PlotterFigureAxesIterator:
-    """
-    This is an iterator class that gives the properly indexed list of axes such that each axis falls on the correct
-    location in the grid.
-    """
-    def __init__(self, fig_cont: FigureContainer, plot_format: PlotterFormat):
-        self.fig_cont:FigureContainer = fig_cont
-        self.rows:int = plot_format.rows
-        self.cols:int = plot_format.cols
-
-        # state
-        self.index = 0
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        rc = self.rows * self.cols
-
-        # add a new figure if the page is full
-        if (rc * len(self.fig_cont.get_figures())) <= self.index:
-            self.fig_cont.add_figure()
-
-        fig = self.fig_cont.get_figure()
-        axis: Axes = fig.add_subplot(self.rows, self.cols, (self.index % rc) + 1)
-        self.index += 1
-        return axis
-
-
-class PlotterSubplot:
-    def __init__(self, ax: Axes, lines: List[PlotterLine], plot_format: PlotterFormat, spc: Species):
-        self.ax: Axes = ax
-        self.lines: List[PlotterLine] = lines
-        self.plot_format = plot_format
-        self.spc = spc
-
-        # set ax info
-        self.ax.set_xscale(plot_format.xscale)
-        self.ax.set_yscale(plot_format.yscale)
-        if plot_format.ylimit is not None:
-            begin, end = plot_format.ylimit
-            # self.ax.set_ylim(ymin=begin, ymax=end)
-        if plot_format.xlimit is not None:
-            self.ax.set_xlim(plot_format.xlimit)
-
-    def plot(self):
-        for line in self.lines:
-            line.plot(self.ax)
-
-    @staticmethod
-    def load_measured_from_experiment_set(experiment_set: ExperimentSet, axes_iterator:PlotterFigureAxesIterator) -> list:
-        subplots = []
-        # load measured experiments
-        # if len(experiment_set.measured_experiments) > 0:
-        #     conditions = experiment_set.measured_experiments[0].conditions
-        #     for condition in conditions.get_conditions():
-        #
-        #         lines.append(OutletMeasuredConditionLine(condition, experiment_set))
-        # axis = fig.add_subplot(1, 1, 0 + 1)
-        return subplots
-
-# this does outlet subplots
-class PlotterSpeciesSubplot(PlotterSubplot):
-    def __init__(self, ax: Axes, spc: Species, experiment_set: ExperimentSet, plot_format: PlotterFormat):
-        lines = [OutletSpeciesExperimentLine(spc, experiment_set), OutletSpeciesSimulatedLine(spc, experiment_set)]
-        super().__init__(ax, lines, plot_format, spc)
-        self.ax.set_title(self.spc.name)
-
-    @staticmethod
-    def load_from_experiment_set(experiment_set: ExperimentSet, plot_format: PlotterFormat, axes_iterator:PlotterFigureAxesIterator) -> list:
-        subplots = []
-        # load spc data
-
-        for spc in experiment_set.simulated_species:
-            axis: Axes = axes_iterator.__next__()
-            subplots.append(PlotterSpeciesSubplot(axis, spc, experiment_set, plot_format))
-
-        return subplots
-
-class PlotterConcentrationMeasurementLine(PlotterLine):
-
-    def __init__(self, spc: Species, experiment_set: ExperimentSet, condition_index):
-        self.spc = spc
-        self.experiment_set = experiment_set
-        self.condition_index = condition_index
-
-    def get_label(self):
-        return "Ur mom"
-
-    def get_color(self):
-        return "black"
-
-    def get_linestyle(self):
-        return '-'
-
-    def get_marker(self):
-        return '.'
-
-    def get_zorder(self):
-        return None
-
-    def get_xdata(self):
-        return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
-
-    def get_ydata(self) -> np.ndarray:
-        return self.experiment_set.measured_experiments[self.condition_index].results.target_results.get(self.spc.name)
-
-
-class PlotterConcentrationSimulatedLine(PlotterLine):
-
-    def __init__(self, spc: Species, experiment_set: ExperimentSet, condition_index):
-        self.spc = spc
-        self.experiment_set = experiment_set
-        self.condition_index = condition_index
-
-    def get_label(self):
-        return "Ur mom"
-
-    def get_color(self):
-        return "red"
-
-    def get_linestyle(self):
-        return '-'
-
-    def get_marker(self):
-        return ''
-
-    def get_zorder(self):
-        return None
-
-    def get_xdata(self):
-        return self.experiment_set.get_x_data()
-
-    def get_ydata(self) -> np.ndarray:
-        return self.experiment_set.all_simulated_experiments[0][self.condition_index].results.target_results.get(self.spc.name)
-
-
-class PlotterConcentrationSubplot(PlotterSubplot):
-    def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantities: Quantity):
-        lines = [
-            PlotterConcentrationMeasurementLine(spc, experiment_set, condition_index),
-            PlotterConcentrationSimulatedLine(spc, experiment_set, condition_index)
-        ]
-        super().__init__(ax, lines, plot_format, spc)
-        title = f"{quantities.magnitude} {quantities.units}"
-        self.ax.set_title(title)
-
-
-    @staticmethod
-    def load_from_experiment_set(experiment_set: ExperimentSet, plot_format: PlotterFormat,
-                                 axes_iterator: PlotterFigureAxesIterator, quantities: List[Quantity], spc: Species) -> list:
-        subplots = []
-        # load spc data
-
-        for condition_index, condition in enumerate(quantities):
-            axis: Axes = axes_iterator.__next__()
-            subplots.append(
-                PlotterConcentrationSubplot(axis, spc, experiment_set, plot_format, condition_index, condition))
-
-        return subplots
 
 class PlotterFigure(FigureContainer): # Called plot in o.g.
 
@@ -542,3 +219,4 @@ class Plotter:
     def plot(job: Job, mechanism_exps: List[Tuple[Mechanism, ExperimentSet]], filename: str = 'output.pdf', output_path: str = None):
         plot = Plot(job, mechanism_exps)
         plot.plot(filename, output_path)
+
