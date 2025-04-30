@@ -4,6 +4,11 @@ import numpy as np
 
 
 class PlotterLine(ABC):
+    """
+    An actual line that will be plotted in a figure. This class should be extended and used in an object that extends
+    PlotterSubplot.
+    """
+
     @abstractmethod
     def get_ydata(self) -> np.ndarray:
         pass

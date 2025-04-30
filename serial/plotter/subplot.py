@@ -10,6 +10,10 @@ from serial.plotter.plotter_iterator import PlotterFigureAxesIterator
 
 
 class PlotterSubplot:
+    """
+    A subplot/ax that can have multiple lines in it.
+    """
+
     def __init__(self, ax: Axes, lines: List[PlotterLine], plot_format: PlotterFormat, spc: Species):
         self.ax: Axes = ax
         self.lines: List[PlotterLine] = lines
@@ -26,17 +30,13 @@ class PlotterSubplot:
             self.ax.set_xlim(plot_format.xlimit)
 
     def plot(self):
+        """
+        Plots all the lines in the subplot/axes.
+        """
         for line in self.lines:
             line.plot(self.ax)
 
     @staticmethod
     def load_measured_from_experiment_set(experiment_set: ExperimentSet, axes_iterator:PlotterFigureAxesIterator) -> list:
         subplots = []
-        # load measured experiments
-        # if len(experiment_set.measured_experiments) > 0:
-        #     conditions = experiment_set.measured_experiments[0].conditions
-        #     for condition in conditions.get_conditions():
-        #
-        #         lines.append(OutletMeasuredConditionLine(condition, experiment_set))
-        # axis = fig.add_subplot(1, 1, 0 + 1)
         return subplots

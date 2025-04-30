@@ -1,10 +1,15 @@
 from abc import ABC
 from typing import List
 
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from serial.plotter.plotter_format import PlotterFormat
 
 class FigureContainer(ABC):
+    """
+    This class allows the iterator to get new figures. It is an interface that should be extended by c class that
+    contains figures such as PlotterFigure.
+    """
 
     def add_figure(self):
         pass
@@ -19,6 +24,7 @@ class PlotterFigureAxesIterator:
     """
     This is an iterator class that gives the properly indexed list of axes such that each axis falls on the correct
     location in the grid.
+    If there are not enough spaces left for a new subplot on the current figure a new figure will be created.
     """
     def __init__(self, fig_cont: FigureContainer, plot_format: PlotterFormat):
         self.fig_cont:FigureContainer = fig_cont
@@ -32,6 +38,9 @@ class PlotterFigureAxesIterator:
         return self
 
     def __next__(self):
+        """
+        Returns an axis/subplot
+        """
         rc = self.rows * self.cols
 
         # add a new figure if the page is full

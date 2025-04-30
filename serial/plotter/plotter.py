@@ -96,7 +96,10 @@ MEASUREMENT_DISPLAY_NAMES = {
 
 
 class PlotterFigure(FigureContainer): # Called plot in o.g.
-
+    """
+    A figure that is composed of rows and columns of subplots. Multiple figures may be produced if there are enough
+    subplots.
+    """
     def __init__(self, job: Job, mechanism:Mechanism, experiment_set: ExperimentSet, plot_format: PlotterFormat):
         self.figs: List[Figure] = [] # = plt.figure(figsize=(8.5, 11))
         self.subplots = []
@@ -184,6 +187,9 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
 
 
 class Plot:
+    """
+    A collection of all plots that the plotter will plot. Produces a PDF at the end.
+    """
     def __init__(self, job: Job, mechanism_exps: List[Tuple[Mechanism, ExperimentSet]]):
         self.plot_format = PlotterFormat()
         self.figures:List[PlotterFigure] = []
