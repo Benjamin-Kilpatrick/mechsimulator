@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import List
 
+from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from serial.plotter.plotter_format import PlotterFormat
@@ -49,6 +50,13 @@ class PlotterFigureAxesIterator:
 
         fig = self.fig_cont.get_figure()
         axis: Axes = fig.add_subplot(self.rows, self.cols, (self.index % rc) + 1)
+
+        axis.tick_params(axis='both', which='major', labelsize=8)
+        axis.tick_params(axis='both', which='minor', labelsize=8)
+
+        fig.subplots_adjust(wspace=0.38, hspace=0.23)
+
         self.index += 1
+
         return axis
 

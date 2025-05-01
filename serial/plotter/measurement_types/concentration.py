@@ -81,7 +81,7 @@ class PlotterConcentrationSubplot(PlotterSubplot):
             PlotterConcentrationSimulatedLine(spc, experiment_set, condition_index)
         ]
         super().__init__(ax, lines, plot_format, spc)
-        title = f"{quantities.magnitude} {quantities.units}"
+        title = f"{quantities}"
         self.ax.set_title(title)
 
 
