@@ -38,14 +38,14 @@ class PlotterLine(ABC):
         pass
 
     def plot(self, ax):
-        mech_xdata = self.get_xdata()
-        line_ydata = self.get_ydata()
-        label = self.get_label()
-        color = self.get_color()
-        linestyle = self.get_linestyle()
-        marker = self.get_marker()
-        zorder = self.get_zorder()
         try:
+            mech_xdata = self.get_xdata()
+            line_ydata = self.get_ydata()
+            label = self.get_label()
+            color = self.get_color()
+            linestyle = self.get_linestyle()
+            marker = self.get_marker()
+            zorder = self.get_zorder()
             ax.plot(mech_xdata, line_ydata, label=label, color=color, linestyle=linestyle, marker=marker, zorder=zorder)
-        except ValueError as e:
+        except Exception as e:
             print(e)

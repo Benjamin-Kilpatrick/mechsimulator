@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+import numpy
 from pint import Quantity
 
 from data.experiments.common.condition import Condition

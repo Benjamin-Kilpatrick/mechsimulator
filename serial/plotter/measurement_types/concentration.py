@@ -30,15 +30,17 @@ class PlotterConcentrationMeasurementLine(PlotterLine):
         return '-'
 
     def get_marker(self):
-        return '.'
+        return ''
 
     def get_zorder(self):
         return None
 
     def get_xdata(self):
-        return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
+        # return self.experiment_set.get_x_data(x_source=DataSource.MEASURED)
+        return self.experiment_set.get_experiment_x_data(self.experiment_set.measured_experiments[self.condition_index])
 
     def get_ydata(self) -> np.ndarray:
+        print('name', self.spc.name)
         return self.experiment_set.measured_experiments[self.condition_index].results.get_target(self.spc.name)
 
 
@@ -75,7 +77,7 @@ class PlotterConcentrationSimulatedLine(PlotterLine):
 class PlotterConcentrationSubplot(PlotterSubplot):
     def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantities: Quantity):
         lines = [
-            # PlotterConcentrationMeasurementLine(spc, experiment_set, condition_index),
+            PlotterConcentrationMeasurementLine(spc, experiment_set, condition_index),
             PlotterConcentrationSimulatedLine(spc, experiment_set, condition_index)
         ]
         super().__init__(ax, lines, plot_format, spc)

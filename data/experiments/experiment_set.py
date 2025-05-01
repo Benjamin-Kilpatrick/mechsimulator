@@ -98,7 +98,7 @@ class ExperimentSet:
         Get the conditions of measured experiments
         :return: measured experiments
         """
-        return self.measured_experiments
+        return [exp.copy() for exp in self.measured_experiments]
 
     def generate_conditions(self) -> List[Experiment]:
         """
@@ -152,6 +152,12 @@ class ExperimentSet:
         if self.has(Condition.END_TIME):
             return self.get_time_x_data(source)
         return self.get_condition_x_data(source)
+
+    def get_experiment_x_data(self, experiment: Experiment) -> numpy.ndarray:
+        if experiment.has(Condition.END_TIME):
+            return experiment.results.get_variable(Condition.TIME).to("seconds")
+        else:
+            raise NotImplementedError()
 
     def get_target_species(self) -> List[Species]:
         return self.simulated_species
