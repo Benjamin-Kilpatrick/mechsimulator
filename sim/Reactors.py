@@ -36,7 +36,7 @@ class Reactors:
             3. temps - Solution temperatures
             4. times - Solution times
         """
-        gas = Reactors.set_gas_state(gas, temp, pressure, mix)
+        gas = Reactors.set_gas_state(gas, temp, pressure.to("pascal"), mix)
 
         if press_of_time is None:
             # Create an array of ones spanning from t=0 to t=end_time

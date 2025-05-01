@@ -100,7 +100,7 @@ class SimulatorUtils:
             end_time: pint.Quantity = experiment.get(Condition.END_TIME)
             dpdt: pint.Quantity = experiment.get(Condition.DPDT)
             times = numpy.array([0, end_time.to('seconds').magnitude])
-            end_pressure = 1 + (end_time * dpdt) / 100
+            end_pressure = 1 + (end_time * dpdt)
             pressures = numpy.array([1, end_pressure])
             p_of_t = numpy.vstack((times, pressures))
 
@@ -174,7 +174,7 @@ class SimulatorUtils:
         sum: float = 0.0
         for spc, quantity in mixture.species:
             # maybe works???
-            out[spc.name] = quantity.to('percent').magnitude
+            out[spc.name] = quantity.magnitude
             sum += out[spc.name]
 
         if mixture.balanced is not None:

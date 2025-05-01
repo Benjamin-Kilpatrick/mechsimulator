@@ -33,6 +33,7 @@ def main():
             simulated_experiments: List[Tuple[Mechanism, ExperimentSet]] = Simulator.run_experiment_set(experiment_set, job.mechanisms)
             completed_jobs.append((job, simulated_experiments))
 
+
     # Output jobs plots
     for job, mechanism_exps in completed_jobs:
         Plotter.plot(job, mechanism_exps)

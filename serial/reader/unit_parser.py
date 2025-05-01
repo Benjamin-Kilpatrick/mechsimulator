@@ -27,7 +27,7 @@ class UnitParser:
         'time': {
             's': _ureg.Quantity(1, 'second'),
             'ms': _ureg.Quantity(1, 'ms'),
-            'micros': _ureg.Quantity(1e-6, 'microsecond'),
+            'micros': _ureg.Quantity(1, 'microsecond'),
         },
         'concentration': {
             'ppm': _ureg.Quantity(1,'ppm'),
