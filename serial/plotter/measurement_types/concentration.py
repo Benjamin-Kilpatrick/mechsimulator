@@ -5,7 +5,10 @@ from matplotlib.axes import Axes
 
 from data.experiments.common.data_source import DataSource
 from data.experiments.experiment_set import ExperimentSet
+from data.job.job import Job
+from data.mechanism.mechanism import Mechanism
 from data.mechanism.species import Species
+from serial.plotter.figure_style import FigureStyle, StyleGenerator
 from serial.plotter.line import PlotterLine
 from serial.plotter.plotter_format import PlotterFormat
 from serial.plotter.plotter_iterator import PlotterFigureAxesIterator
@@ -40,7 +43,6 @@ class PlotterConcentrationMeasurementLine(PlotterLine):
         return self.experiment_set.get_experiment_x_data(self.experiment_set.measured_experiments[self.condition_index])
 
     def get_ydata(self) -> np.ndarray:
-        print('name', self.spc.name)
         return self.experiment_set.measured_experiments[self.condition_index].results.get_target(self.spc.name)
 
 
@@ -73,6 +75,21 @@ class PlotterConcentrationSimulatedLine(PlotterLine):
         return self.experiment_set.all_simulated_experiments[0][self.condition_index].results.get_target(self.spc.name)
 
 
+class PlotterConcentrationFigureStyle(FigureStyle):
+    def __init__(self, job: Job, mechanism: Mechanism, exp_set: ExperimentSet, spc: Species):
+        super().__init__(job, mechanism, exp_set)
+        self.spc = spc
+
+    def get_group_title(self) -> str:
+        return self.spc.name
+
+class PlotterConcentrationFigureStyleGenerator(StyleGenerator):
+    def __init__(self, spc: Species):
+        self.spc = spc
+
+    def generate(self, job: Job, mechanism: Mechanism, experiment_set: ExperimentSet) -> FigureStyle:
+        return PlotterConcentrationFigureStyle(job, mechanism, experiment_set, self.spc)
+
 
 class PlotterConcentrationSubplot(PlotterSubplot):
     def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantities: Quantity):
@@ -92,8 +109,12 @@ class PlotterConcentrationSubplot(PlotterSubplot):
         # load spc data
 
         for condition_index, condition in enumerate(quantities):
-            axis: Axes = axes_iterator.__next__()
+            axis: Axes = axes_iterator.__next__(style_generator=PlotterConcentrationFigureStyleGenerator(spc))
             subplots.append(
                 PlotterConcentrationSubplot(axis, spc, experiment_set, plot_format, condition_index, condition))
 
         return subplots
+
+
+
+

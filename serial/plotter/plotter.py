@@ -13,6 +13,7 @@ from data.experiments.measurement import Measurement
 from data.experiments.reaction import Reaction
 from data.job.job import Job
 from data.mechanism.mechanism import Mechanism
+from serial.plotter.figure_style import FigureStyle, StyleGenerator
 from serial.plotter.measurement_types.concentration import PlotterConcentrationSubplot
 from serial.plotter.measurement_types.outlet import PlotterSpeciesSubplot
 
@@ -101,7 +102,8 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
     subplots.
     """
     def __init__(self, job: Job, mechanism:Mechanism, experiment_set: ExperimentSet, plot_format: PlotterFormat):
-        self.figs: List[Figure] = [] # = plt.figure(figsize=(8.5, 11))
+        self.figs: List[Figure] = []
+        self.fig_style: List[FigureStyle] = []
         self.subplots = []
         self.plot_format:PlotterFormat = plot_format
         self.axes_iterator = PlotterFigureAxesIterator(self, self.plot_format)
@@ -125,65 +127,29 @@ class PlotterFigure(FigureContainer): # Called plot in o.g.
     def get_figures(self) -> List[Figure]:
         return self.figs
 
-    def add_figure(self):
+    def add_figure(self, style_generator:StyleGenerator = None):
         fig = plt.figure(figsize=(8.5, 11))
         self.figs.append(fig)
-        PlotterFigure.add_headers_and_footers(self.job, self.mechanism, self.experiment_set, fig)
+        if style_generator:
+            self.fig_style.append(style_generator.generate(self.job, self.mechanism, self.experiment_set))
+        else:
+            self.fig_style.append(None)
 
-    def get_figure(self) -> Figure:
+    def get_figure(self, style_generator:StyleGenerator = None) -> Figure:
         if len(self.figs) == 0:
-            self.add_figure()
+            self.add_figure(style_generator=style_generator)
         return self.figs[-1]
 
     def get_variable_of_interest(self) -> Condition:
         return self.experiment_set.condition_range.variable_of_interest
 
     def plot(self):
+        for fig, fig_style in zip(self.figs, self.fig_style):
+            if fig_style:
+                fig_style.add_headers_and_footers(fig)
+
         for subplot in self.subplots:
             subplot.plot()
-
-    @staticmethod
-    def add_headers_and_footers(job: Job, mechanism:Mechanism, exp_set: ExperimentSet, fig: Figure):
-        """ Adds header and footer text to a figure
-        """
-
-        # Make some text describing the legends
-        header_x_positions = [0.06, 0.37, 0.68]
-        header_y_positions = [0.9, 0.92]
-
-        for mech_idx, mechanism in enumerate(job.mechanisms):
-            header = f'{COLORS[mech_idx % len(COLORS)]} lines: {mechanism.mechanism_name}'
-            if mech_idx < 3:  # three mechs per row
-                y_idx = 0
-            else:
-                y_idx = 1
-            plt.figtext(header_x_positions[mech_idx % 3], header_y_positions[y_idx],
-                        header, fontsize=12, color=COLORS[mech_idx % len(COLORS)])
-
-        # Make some text describing the experimental set
-        source = mechanism.mechanism_name
-        description = exp_set.metadata.description
-        reac_type = REACTION_DISPLAY_NAMES[exp_set.reaction]
-        meas_type = MEASUREMENT_DISPLAY_NAMES[exp_set.measurement]
-        fig.text(0.01, 0.98, f'Source: {source}', fontsize=10)
-        fig.text(0.01, 0.96, f'Description: {description}', fontsize=10)
-        fig.text(0.77, 0.98, f'Reac. type: {reac_type}', fontsize=10)
-        fig.text(0.77, 0.96, f'Meas. type: {meas_type}', fontsize=10)
-
-        # TODO! figure out this stuff where to get the title and how pages work within a group
-        group_title = "Outlet concentrations" # grp_titles[grp_idx]
-        pg_idx = 0
-        pgs_per_grp = 1
-        title = f'{group_title}\n(pg. {pg_idx + 1} of {pgs_per_grp})'
-        fig.suptitle(title, y=0.99, fontsize=16)
-
-        # footers
-        ylabel = ""
-        xlabel = ""
-        footnote1 = f'Y-axis: {ylabel}\n'
-        footnote2 = f'X-axis: {xlabel}\n'
-        footnotes = footnote1 + footnote2
-        fig.text(0.11, 0.06, footnotes, fontsize=10, va="top", ha="left")
 
 
 
