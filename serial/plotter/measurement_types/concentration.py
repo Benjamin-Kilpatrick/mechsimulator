@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+from matplotlib import rcParams
 from matplotlib.axes import Axes
 
 from data.experiments.common.data_source import DataSource
@@ -99,7 +100,8 @@ class PlotterConcentrationSubplot(PlotterSubplot):
         ]
         super().__init__(ax, lines, plot_format, spc)
         title = f"{quantities}"
-        self.ax.set_title(title)
+        title_font = {'fontsize': 10}
+        self.ax.set_title(title, fontdict=title_font, pad=0)
 
 
     @staticmethod
