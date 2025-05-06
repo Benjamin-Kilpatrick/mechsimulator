@@ -1,3 +1,6 @@
+"""
+The FigureStyle class. This class is used to create headers and footers for new pages when they are loaded
+"""
 from abc import ABC, abstractmethod
 
 from matplotlib.figure import Figure

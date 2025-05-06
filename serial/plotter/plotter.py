@@ -166,6 +166,9 @@ class Plot:
             self.figures.append(PlotterFigure(job, mechanism, experiment_set, self.plot_format))
 
     def plot(self, filename, path):
+        """
+        Calls plot on all the figures that it contains then writes the result to a pdf file.
+        """
         for figure in self.figures:
             figure.plot()
 

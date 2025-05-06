@@ -1,3 +1,6 @@
+"""
+The concentration measurement type related classes
+"""
 from typing import List
 
 import numpy as np
@@ -18,6 +21,9 @@ from pint import Quantity
 
 
 class PlotterConcentrationMeasurementLine(PlotterLine):
+    """
+    The line that is used for measurement data in the concentration reaction
+    """
 
     def __init__(self, spc: Species, experiment_set: ExperimentSet, condition_index):
         self.spc = spc
@@ -48,7 +54,9 @@ class PlotterConcentrationMeasurementLine(PlotterLine):
 
 
 class PlotterConcentrationSimulatedLine(PlotterLine):
-
+    """
+    The line that is used for simulated data in the concentration reaction
+    """
     def __init__(self, spc: Species, experiment_set: ExperimentSet, condition_index):
         self.spc = spc
         self.experiment_set = experiment_set
@@ -77,6 +85,9 @@ class PlotterConcentrationSimulatedLine(PlotterLine):
 
 
 class PlotterConcentrationFigureStyle(FigureStyle):
+    """
+    Plotter concentration figure style. Which returns the species name as the group title
+    """
     def __init__(self, job: Job, mechanism: Mechanism, exp_set: ExperimentSet, spc: Species):
         super().__init__(job, mechanism, exp_set)
         self.spc = spc
@@ -85,6 +96,11 @@ class PlotterConcentrationFigureStyle(FigureStyle):
         return self.spc.name
 
 class PlotterConcentrationFigureStyleGenerator(StyleGenerator):
+    """
+    This is a generator that allows the PlotterConcentrationFigureStyle object to be generated and used for
+    styling pages.
+    """
+
     def __init__(self, spc: Species):
         self.spc = spc
 
@@ -93,6 +109,11 @@ class PlotterConcentrationFigureStyleGenerator(StyleGenerator):
 
 
 class PlotterConcentrationSubplot(PlotterSubplot):
+    """
+    The subplot used for the concentration measurement type. It displays both measured and simulated concentration
+    data.
+    """
+
     def __init__(self, ax: Axes, spc, experiment_set: ExperimentSet, plot_format: PlotterFormat, condition_index:int, quantities: Quantity):
         lines = [
             PlotterConcentrationMeasurementLine(spc, experiment_set, condition_index),
