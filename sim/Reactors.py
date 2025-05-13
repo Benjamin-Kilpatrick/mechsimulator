@@ -11,9 +11,6 @@ from data.experiments.mixture_type import MixtureType
 from sim.SimulatorUtils import SimulatorUtils
 
 
-# used ---- to split functions for my own view for now, so i know where functions are that were inside of other functions
-
-
 
 class Reactors:
 
@@ -64,7 +61,6 @@ class Reactors:
             """
             dvdt = np.gradient(velocity_of_time[1, :], velocity_of_time[0, :])
             dxdt = dvdt / wall.area  # only for clarity (since A = 1 m^2)
-            #todo-t: do I do quantity?
             vel = np.interp(temp_time, velocity_of_time[0, :], -1 * dxdt)
             return vel
 
@@ -162,7 +158,6 @@ class Reactors:
             
 
     # ---------------
-    #todo-t: Change Quantity to condition? Again, mix List or single? how does list differ?
     @staticmethod
     def pfr(temp: Quantity, pressure: Quantity, mix, gas, targ_species, mdot, area, length, res_time=None, n_steps=2000, x_profile=None, t_profile=None, t_profile_setpoints=None):
         """
@@ -181,7 +176,7 @@ class Reactors:
             number of timesteps taken)
         :param x_profile: array of the x_data
         :param t_profile: array of the temperatures
-        :param t_profile_setpoints: #todo-t: WOUT IS DIS????
+        :param t_profile_setpoints: array of points, not too sure what this is
         :return:
             1. targ_concs - the target concentrations
             2. pressures - Solution pressures
@@ -273,7 +268,6 @@ class Reactors:
             2. all_concs - all species concentrations from the previous solution
             3. end_gas - the gas originally passed in
         """
-        #todo-t: took this out as the last param and made it a local variable
         max_iter = 30000
 
         # Note: must set gas with mix before creating reservoirs!
@@ -385,7 +379,6 @@ class Reactors:
     def free_flame(temp: Quantity, pressure: Quantity, mix: Dict[MixtureType, Mixture], gas, targ_species, phi, previous_solution=None):
         """
         Runs an adiabatic, 1-D, freely propagating flame simulation
-        TODO: NOTE: need to add options for simulation details
 
         :param temp: reactor inlet temperature, pre-configured to kelvin via pint
         :param pressure: reactor constant pressure, pre-configured to atm via pint
@@ -404,7 +397,7 @@ class Reactors:
 
         # initialize the data from Cantera
         gas = Reactors.set_fuel_state(gas, temp, pressure, mix, phi)
-        loglevel = 0 # TODO-t:what is the purpose of supressing output here?
+        loglevel = 0
         flame: cantera.FreeFlame = Cantera.FreeFlame(gas) # cantera returns a result here from this input
         flame.transport_model = 'Mix'
         if previous_solution is not None:
@@ -424,7 +417,7 @@ class Reactors:
             if targ_spc in gas.species_names:
                 targ_concs[targ_ndx] = flame.solution(targ_spc)
             else:  # if the targ_spc isn't in the mechanism
-                targ_concs[targ_ndx] = np.nan # todo-t: ???
+                targ_concs[targ_ndx] = np.nan
 
         # Get other results
         pos = flame.grid
@@ -461,7 +454,6 @@ class Reactors:
         :return Cantera Solution object
         """
 
-        # todo-t: this is the part we need to fix now, marcelo should be making functions for the strings
         fuel, oxid = SimulatorUtils.convert_fuel_mixture(mix[MixtureType.FUEL_MIXTURE], mix[MixtureType.OXIDIZER_MIXTURE])
         gas.set_equivalence_ratio(phi, fuel, oxid, basis='mole')
         gas.TP = temp, pressure
